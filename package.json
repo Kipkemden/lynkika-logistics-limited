@@ -36,5 +36,8 @@
     "material-design"
   ],
   "author": "Lynkika Logistics",
-  "license": "PROPRIETARY"
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": "18.x"
+  }
 }

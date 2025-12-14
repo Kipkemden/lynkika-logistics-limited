@@ -16,29 +16,54 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// Try to load routes with error handling
+// Initialize Supabase with error handling
+let supabaseInitialized = false;
 try {
-  // Test Supabase connection
   const supabase = require('../config/supabase');
   console.log('Supabase client initialized');
-
-  // Load routes
-  app.use('/api/auth', require('../routes/auth'));
-  app.use('/api/quotes', require('../routes/quotes'));
-  app.use('/api/bookings', require('../routes/bookings'));
-  app.use('/api/tracking', require('../routes/tracking'));
-  app.use('/api/routes', require('../routes/routes'));
-  app.use('/api/admin', require('../routes/admin'));
-  app.use('/api/security', require('../routes/security'));
+  supabaseInitialized = true;
 } catch (error) {
-  console.error('Error loading routes:', error);
-  app.get('/api/*', (req, res) => {
-    res.status(500).json({ 
-      message: 'API temporarily unavailable', 
-      error: error.message 
-    });
-  });
+  console.error('Supabase initialization failed:', error);
 }
+
+// Load routes one by one with individual error handling
+const routes = [
+  { path: '/api/auth', file: '../routes/auth' },
+  { path: '/api/quotes', file: '../routes/quotes' },
+  { path: '/api/bookings', file: '../routes/bookings' },
+  { path: '/api/tracking', file: '../routes/tracking' },
+  { path: '/api/routes', file: '../routes/routes' },
+  { path: '/api/admin', file: '../routes/admin' },
+  { path: '/api/security', file: '../routes/security' }
+];
+
+routes.forEach(({ path, file }) => {
+  try {
+    const router = require(file);
+    app.use(path, router);
+    console.log(`✓ Loaded route: ${path}`);
+  } catch (error) {
+    console.error(`✗ Failed to load route ${path}:`, error.message);
+    // Create a fallback route for this path
+    app.use(path, (req, res) => {
+      res.status(500).json({ 
+        message: `${path} temporarily unavailable`,
+        error: `Route loading failed: ${error.message}`
+      });
+    });
+  }
+});
+
+// Add debug info endpoint
+app.get('/api/debug', (req, res) => {
+  res.json({
+    status: 'Server running',
+    supabaseInitialized,
+    nodeVersion: process.version,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '../client/build')));

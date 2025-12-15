@@ -31,12 +31,33 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Handle Netlify path routing
+// Handle Netlify path routing - Netlify strips paths, so we use originalUrl
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.path} - Original: ${req.originalUrl}`);
   
-  // Netlify sends paths like /quotes, /bookings, etc. (without /api prefix)
-  // So we don't need to modify the path, just log for debugging
+  // Netlify strips the path, so we need to reconstruct it from originalUrl
+  if (req.originalUrl && req.originalUrl.startsWith('/api/')) {
+    const apiPath = req.originalUrl.replace('/api', '');
+    req.url = apiPath || '/';
+    req.path = apiPath || '/';
+    console.log(`Reconstructed path: ${req.path}`);
+  }
+  
+  next();
+});
+
+// Handle quotes POST requests directly using originalUrl
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.originalUrl === '/api/quotes') {
+    console.log('Direct quotes POST handler triggered');
+    return res.json({
+      message: 'Direct quotes endpoint reached!',
+      path: req.path,
+      method: req.method,
+      originalUrl: req.originalUrl,
+      body: req.body ? 'Body received' : 'No body'
+    });
+  }
   next();
 });
 

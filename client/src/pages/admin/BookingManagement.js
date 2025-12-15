@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -66,7 +66,7 @@ const BookingManagement = () => {
     fetchBookings();
   }, [user, navigate, page, statusFilter, serviceFilter, fetchBookings]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -84,7 +84,7 @@ const BookingManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter, serviceFilter]);
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);

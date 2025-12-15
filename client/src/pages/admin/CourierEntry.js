@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -153,7 +153,7 @@ const CourierEntry = () => {
     }));
   };
 
-  const calculatePricing = () => {
+  const calculatePricing = useCallback(() => {
     let baseAmount = 15; // Base courier rate
     let additionalCharges = [];
     
@@ -187,7 +187,7 @@ const CourierEntry = () => {
         totalAmount: baseAmount
       }
     }));
-  };
+  }, [formData.items, formData.delivery.timeSlot]);
 
   React.useEffect(() => {
     calculatePricing();

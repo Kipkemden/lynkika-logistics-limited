@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -157,7 +157,7 @@ const BookingPage = () => {
     return nextDeparture;
   };
 
-  const fetchCapacityData = async () => {
+  const fetchCapacityData = useCallback(async () => {
     try {
       const response = await axios.get(
         `/api/routes/${selectedRoute}/capacity/${formData.pickup.date.format('YYYY-MM-DD')}`
@@ -166,7 +166,7 @@ const BookingPage = () => {
     } catch (error) {
       console.error('Failed to fetch capacity data');
     }
-  };
+  }, [selectedRoute, formData.pickup.date]);
 
   const handleNext = () => {
     setActiveStep((prev) => prev + 1);

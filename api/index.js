@@ -56,26 +56,38 @@ routes.forEach(({ path, file }) => {
 
 // Add debug info endpoint
 app.get('/api/debug', (req, res) => {
+  const fs = require('fs');
+  const buildPath = path.join(__dirname, '../client/build');
+  const indexExists = fs.existsSync(path.join(buildPath, 'index.html'));
+  
   res.json({
     status: 'Server running',
     supabaseInitialized,
     nodeVersion: process.version,
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    buildPath: buildPath,
+    indexExists: indexExists,
+    __dirname: __dirname
   });
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../client/build')));
+// Serve static files from React build
+const buildPath = path.join(__dirname, '../client/build');
+app.use(express.static(buildPath));
 
-// Catch all handler for React app
+// Catch all handler for React app (must be last)
 app.get('*', (req, res) => {
   try {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
+    const indexPath = path.join(buildPath, 'index.html');
+    console.log('Serving React app from:', indexPath);
+    res.sendFile(indexPath);
   } catch (error) {
+    console.error('Error serving React app:', error);
     res.status(500).json({ 
       message: 'Application temporarily unavailable',
-      error: error.message 
+      error: error.message,
+      buildPath: buildPath
     });
   }
 });

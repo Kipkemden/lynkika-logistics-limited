@@ -5,6 +5,11 @@ const compression = require('compression');
 
 const app = express();
 
+// Configure serverless-http to handle base path properly
+const serverlessHandler = serverless(app, {
+  basePath: '/api'
+});
+
 // Basic middleware
 app.use(compression());
 app.use(cors());
@@ -194,4 +199,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports.handler = serverless(app);
+module.exports.handler = serverlessHandler;

@@ -1,10 +1,20 @@
 const supabase = require('../config/supabase');
 
 class QuoteService {
+  generateQuoteReference() {
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `Q${timestamp}${random}`;
+  }
+
   async createQuote(quoteData) {
+    // Generate quote reference in application as fallback
+    const quoteReference = this.generateQuoteReference();
+    
     const { data, error } = await supabase
       .from('quotes')
       .insert([{
+        quote_reference: quoteReference,
         service_type: quoteData.serviceType,
         customer_name: quoteData.customer.name,
         customer_email: quoteData.customer.email,

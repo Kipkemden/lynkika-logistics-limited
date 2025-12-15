@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -20,35 +19,72 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Grid,
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
-import { Add, Edit, Visibility } from '@mui/icons-material';
+import {
+  Add,
+  Edit,
+  Delete,
+  Route as RouteIcon
+} from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 
 const RouteManagement = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [routes, setRoutes] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState(null);
   const [formData, setFormData] = useState({
     routeCode: '',
     name: '',
-    origin: { city: '', address: '' },
-    destination: { city: '', address: '' },
-    schedule: { frequency: 'weekly', departureTime: '', estimatedDuration: '' },
-    capacity: { maxWeight: '', maxVolume: '', maxParcels: '' },
-    pricing: { baseRate: '', perKgRate: '', perCubicMeterRate: '' },
-    cutoffHours: 24,
-    isActive: true
+    origin: {
+      city: '',
+      address: '',
+      coordinates: { lat: '', lng: '' }
+    },
+    destination: {
+      city: '',
+      address: '',
+      coordinates: { lat: '', lng: '' }
+    },
+    schedule: {
+      frequency: 'weekly',
+      departureTime: '',
+      estimatedDuration: ''
+    },
+    capacity: {
+      maxWeight: '',
+      maxVolume: '',
+      maxParcels: ''
+    },
+    pricing: {
+      baseRate: '',
+      perKgRate: '',
+      perCubicMeterRate: ''
+    },
+    isActive: true,
+    cutoffHours: 24
   });
 
   useEffect(() => {
+    if (!user || !['super_admin', 'operations_manager'].includes(user.role)) {
+      navigate('/ops-control-center');
+      return;
+    }
     fetchRoutes();
-  }, []);
+  }, [user, navigate]);
 
   const fetchRoutes = async () => {
     try {
@@ -56,43 +92,55 @@ const RouteManagement = () => {
       setRoutes(response.data);
     } catch (error) {
       console.error('Failed to fetch routes');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (editingRoute) {
-        await axios.put(`/api/admin/routes/${editingRoute._id}`, formData);
-      } else {
-        await axios.post('/api/admin/routes', formData);
-      }
-      fetchRoutes();
-      handleClose();
-    } catch (error) {
-      console.error('Failed to save route');
+  const handleOpenDialog = (route = null) => {
+    if (route) {
+      setEditingRoute(route);
+      setFormData(route);
+    } else {
+      setEditingRoute(null);
+      setFormData({
+        routeCode: '',
+        name: '',
+        origin: {
+          city: '',
+          address: '',
+          coordinates: { lat: '', lng: '' }
+        },
+        destination: {
+          city: '',
+          address: '',
+          coordinates: { lat: '', lng: '' }
+        },
+        schedule: {
+          frequency: 'weekly',
+          departureTime: '',
+          estimatedDuration: ''
+        },
+        capacity: {
+          maxWeight: '',
+          maxVolume: '',
+          maxParcels: ''
+        },
+        pricing: {
+          baseRate: '',
+          perKgRate: '',
+          perCubicMeterRate: ''
+        },
+        isActive: true,
+        cutoffHours: 24
+      });
     }
+    setDialogOpen(true);
   };
 
-  const handleClose = () => {
-    setOpen(false);
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
     setEditingRoute(null);
-    setFormData({
-      routeCode: '',
-      name: '',
-      origin: { city: '', address: '' },
-      destination: { city: '', address: '' },
-      schedule: { frequency: 'weekly', departureTime: '', estimatedDuration: '' },
-      capacity: { maxWeight: '', maxVolume: '', maxParcels: '' },
-      pricing: { baseRate: '', perKgRate: '', perCubicMeterRate: '' },
-      cutoffHours: 24,
-      isActive: true
-    });
-  };
-
-  const handleEdit = (route) => {
-    setEditingRoute(route);
-    setFormData(route);
-    setOpen(true);
   };
 
   const handleInputChange = (section, field, value) => {
@@ -105,113 +153,182 @@ const RouteManagement = () => {
         }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
+  };
+
+  const handleNestedInputChange = (section, subsection, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [subsection]: {
+          ...prev[section][subsection],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (editingRoute) {
+        await axios.put(`/api/admin/routes/${editingRoute._id}`, formData);
+      } else {
+        await axios.post('/api/admin/routes', formData);
+      }
+      fetchRoutes();
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Failed to save route');
     }
   };
 
   return (
     <AdminLayout>
-      <Box>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Typography variant="h4" gutterBottom fontWeight={700}>
+          <Box>
+            <Typography variant="h4" gutterBottom>
               Route Management
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Manage scheduled routes and capacity settings
             </Typography>
-          </motion.div>
-          
+          </Box>
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => setOpen(true)}
-            size="large"
+            onClick={() => handleOpenDialog()}
           >
             Add New Route
           </Button>
         </Box>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Card>
-            <CardContent>
-              <TableContainer component={Paper} elevation={0}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Route Code</TableCell>
-                      <TableCell>Name</TableCell>
-                      <TableCell>Origin → Destination</TableCell>
-                      <TableCell>Schedule</TableCell>
-                      <TableCell>Capacity</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Actions</TableCell>
+        <Card>
+          <CardContent>
+            <TableContainer component={Paper} elevation={0}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Route Code</TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Origin → Destination</TableCell>
+                    <TableCell>Schedule</TableCell>
+                    <TableCell>Capacity</TableCell>
+                    <TableCell>Base Rate</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {routes.map((route) => (
+                    <TableRow key={route._id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {route.routeCode}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {route.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2">
+                            {route.origin.city} → {route.destination.city}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {route.schedule.estimatedDuration}h journey
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2">
+                            {route.schedule.frequency}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Departs: {route.schedule.departureTime}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="caption" display="block">
+                            {route.capacity.maxWeight}kg
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            {route.capacity.maxVolume}m³
+                          </Typography>
+                          <Typography variant="caption" display="block">
+                            {route.capacity.maxParcels} parcels
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          ${route.pricing.baseRate}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={route.isActive ? 'Active' : 'Inactive'}
+                          color={route.isActive ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenDialog(route)}
+                        >
+                          <Edit />
+                        </IconButton>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {routes.map((route) => (
-                      <TableRow key={route._id} hover>
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={600}>
-                            {route.routeCode}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{route.name}</TableCell>
-                        <TableCell>
-                          {route.origin.city} → {route.destination.city}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {route.schedule.frequency} at {route.schedule.departureTime}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {route.capacity.maxWeight}kg / {route.capacity.maxVolume}m³
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={route.isActive ? 'Active' : 'Inactive'}
-                            color={route.isActive ? 'success' : 'default'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <IconButton onClick={() => handleEdit(route)} size="small">
-                            <Edit />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-        {/* Route Form Dialog */}
-        <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+            {routes.length === 0 && !loading && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <RouteIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No routes configured
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Create your first route to start managing scheduled shipments
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Route Dialog */}
+        <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
           <DialogTitle>
             {editingRoute ? 'Edit Route' : 'Add New Route'}
           </DialogTitle>
           <DialogContent>
             <Grid container spacing={3} sx={{ mt: 1 }}>
+              {/* Basic Info */}
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Route Code"
                   value={formData.routeCode}
-                  onChange={(e) => handleInputChange(null, 'routeCode', e.target.value)}
+                  onChange={(e) => handleInputChange(null, 'routeCode', e.target.value.toUpperCase())}
+                  placeholder="e.g., NYC-LA-001"
                 />
               </Grid>
               <Grid item xs={12} md={6}>
@@ -220,9 +337,16 @@ const RouteManagement = () => {
                   label="Route Name"
                   value={formData.name}
                   onChange={(e) => handleInputChange(null, 'name', e.target.value)}
+                  placeholder="e.g., New York to Los Angeles Express"
                 />
               </Grid>
-              
+
+              {/* Origin */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Origin
+                </Typography>
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
@@ -234,12 +358,41 @@ const RouteManagement = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
+                  label="Origin Address"
+                  value={formData.origin.address}
+                  onChange={(e) => handleInputChange('origin', 'address', e.target.value)}
+                />
+              </Grid>
+
+              {/* Destination */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Destination
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
                   label="Destination City"
                   value={formData.destination.city}
                   onChange={(e) => handleInputChange('destination', 'city', e.target.value)}
                 />
               </Grid>
-              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Destination Address"
+                  value={formData.destination.address}
+                  onChange={(e) => handleInputChange('destination', 'address', e.target.value)}
+                />
+              </Grid>
+
+              {/* Schedule */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Schedule
+                </Typography>
+              </Grid>
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
                   <InputLabel>Frequency</InputLabel>
@@ -259,10 +412,9 @@ const RouteManagement = () => {
                 <TextField
                   fullWidth
                   label="Departure Time"
-                  type="time"
                   value={formData.schedule.departureTime}
                   onChange={(e) => handleInputChange('schedule', 'departureTime', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+                  placeholder="e.g., 08:00 AM"
                 />
               </Grid>
               <Grid item xs={12} md={4}>
@@ -271,17 +423,23 @@ const RouteManagement = () => {
                   label="Duration (hours)"
                   type="number"
                   value={formData.schedule.estimatedDuration}
-                  onChange={(e) => handleInputChange('schedule', 'estimatedDuration', parseInt(e.target.value))}
+                  onChange={(e) => handleInputChange('schedule', 'estimatedDuration', parseFloat(e.target.value))}
                 />
               </Grid>
-              
+
+              {/* Capacity */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Capacity Limits
+                </Typography>
+              </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
                   label="Max Weight (kg)"
                   type="number"
                   value={formData.capacity.maxWeight}
-                  onChange={(e) => handleInputChange('capacity', 'maxWeight', parseInt(e.target.value))}
+                  onChange={(e) => handleInputChange('capacity', 'maxWeight', parseFloat(e.target.value))}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
@@ -290,7 +448,7 @@ const RouteManagement = () => {
                   label="Max Volume (m³)"
                   type="number"
                   value={formData.capacity.maxVolume}
-                  onChange={(e) => handleInputChange('capacity', 'maxVolume', parseInt(e.target.value))}
+                  onChange={(e) => handleInputChange('capacity', 'maxVolume', parseFloat(e.target.value))}
                 />
               </Grid>
               <Grid item xs={12} md={4}>
@@ -302,7 +460,13 @@ const RouteManagement = () => {
                   onChange={(e) => handleInputChange('capacity', 'maxParcels', parseInt(e.target.value))}
                 />
               </Grid>
-              
+
+              {/* Pricing */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Pricing
+                </Typography>
+              </Grid>
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
@@ -327,20 +491,44 @@ const RouteManagement = () => {
                   fullWidth
                   label="Per m³ Rate ($)"
                   type="number"
+                  step="0.01"
                   value={formData.pricing.perCubicMeterRate}
                   onChange={(e) => handleInputChange('pricing', 'perCubicMeterRate', parseFloat(e.target.value))}
+                />
+              </Grid>
+
+              {/* Settings */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Booking Cutoff (hours)"
+                  type="number"
+                  value={formData.cutoffHours}
+                  onChange={(e) => handleInputChange(null, 'cutoffHours', parseInt(e.target.value))}
+                  helperText="Hours before departure to stop accepting bookings"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isActive}
+                      onChange={(e) => handleInputChange(null, 'isActive', e.target.checked)}
+                    />
+                  }
+                  label="Route Active"
                 />
               </Grid>
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
             <Button onClick={handleSubmit} variant="contained">
-              {editingRoute ? 'Update' : 'Create'} Route
+              {editingRoute ? 'Update Route' : 'Create Route'}
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      </motion.div>
     </AdminLayout>
   );
 };

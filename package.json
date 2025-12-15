@@ -23,7 +23,8 @@
     "express": "^4.18.2",
     "express-rate-limit": "^6.10.0",
     "helmet": "^7.0.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "serverless-http": "^3.2.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
@@ -38,6 +39,6 @@
   "author": "Lynkika Logistics",
   "license": "PROPRIETARY",
   "engines": {
-    "node": "24.x"
+    "node": "22.x"
   }
 }

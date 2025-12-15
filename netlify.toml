@@ -1,0 +1,22 @@
+[build]
+  # Build command
+  command = "npm run build"
+  # Directory to publish (React build output)
+  publish = "client/build"
+  # Functions directory for serverless functions
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Redirect all API calls to serverless functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Redirect all other requests to React app (SPA routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

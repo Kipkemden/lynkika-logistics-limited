@@ -36,46 +36,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Handle Netlify path routing - Netlify strips paths, so we use originalUrl
+// Log requests for debugging
 app.use((req, res, next) => {
-  console.log(`Incoming request: ${req.method} ${req.path} - Original: ${req.originalUrl}`);
-  
-  // Netlify strips the path, so we need to reconstruct it from originalUrl
-  if (req.originalUrl && req.originalUrl.startsWith('/api/')) {
-    const apiPath = req.originalUrl.replace('/api', '');
-    req.url = apiPath || '/';
-    req.path = apiPath || '/';
-    console.log(`Reconstructed path: ${req.path}`);
-  }
-  
+  console.log(`${req.method} ${req.path} - Original: ${req.originalUrl}`);
   next();
 });
 
-// Handle quotes POST requests directly using originalUrl
-app.use((req, res, next) => {
-  if (req.method === 'POST' && req.originalUrl === '/api/quotes') {
-    console.log('Direct quotes POST handler triggered');
-    return res.json({
-      message: 'Direct quotes endpoint reached!',
-      path: req.path,
-      method: req.method,
-      originalUrl: req.originalUrl,
-      body: req.body ? 'Body received' : 'No body'
-    });
-  }
-  next();
-});
-
-// Test quotes endpoint - this should catch POST /quotes
-app.post('/quotes', (req, res) => {
-  res.json({
-    message: 'Test quotes endpoint reached!',
-    path: req.path,
-    method: req.method,
-    originalUrl: req.originalUrl,
-    body: req.body ? 'Body received' : 'No body'
-  });
-});
+// Remove test endpoints - they were intercepting real requests
 
 // Load routes with better error handling
 try {
@@ -160,11 +127,7 @@ app.get('/debug', (req, res) => {
   });
 });
 
-// Add middleware to log all requests for debugging
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Original URL: ${req.originalUrl}`);
-  next();
-});
+
 
 // Handle root path requests (GET only)
 app.get('/', (req, res) => {

@@ -31,6 +31,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Test quotes endpoint
+app.post('/quotes', (req, res) => {
+  res.json({
+    message: 'Quotes endpoint reached!',
+    path: req.path,
+    method: req.method,
+    body: req.body
+  });
+});
+
 // Load routes with better error handling
 try {
   const quotesRouter = require('../../routes/quotes');
@@ -107,8 +117,17 @@ app.get('/debug', (req, res) => {
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
     path: req.path,
-    method: req.method
+    originalUrl: req.originalUrl,
+    method: req.method,
+    headers: req.headers,
+    query: req.query
   });
+});
+
+// Add middleware to log all requests for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Original URL: ${req.originalUrl}`);
+  next();
 });
 
 // Catch all for debugging

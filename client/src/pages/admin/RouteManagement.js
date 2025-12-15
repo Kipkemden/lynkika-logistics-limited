@@ -30,7 +30,6 @@ import {
 import {
   Add,
   Edit,
-  Delete,
   Route as RouteIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -158,19 +157,6 @@ const RouteManagement = () => {
         [field]: value
       }));
     }
-  };
-
-  const handleNestedInputChange = (section, subsection, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [subsection]: {
-          ...prev[section][subsection],
-          [field]: value
-        }
-      }
-    }));
   };
 
   const handleSubmit = async () => {

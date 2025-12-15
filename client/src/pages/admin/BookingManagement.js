@@ -64,7 +64,7 @@ const BookingManagement = () => {
       return;
     }
     fetchBookings();
-  }, [user, navigate, page, statusFilter, serviceFilter]);
+  }, [user, navigate, page, statusFilter, serviceFilter, fetchBookings]);
 
   const fetchBookings = async () => {
     try {

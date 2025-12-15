@@ -106,7 +106,7 @@ const BookingPage = () => {
     if (selectedRoute && formData.pickup.date) {
       fetchCapacityData();
     }
-  }, [selectedRoute, formData.pickup.date]);
+  }, [selectedRoute, formData.pickup.date, fetchCapacityData]);
 
   const fetchRoutes = async () => {
     try {

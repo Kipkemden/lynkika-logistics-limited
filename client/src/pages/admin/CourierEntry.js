@@ -191,7 +191,7 @@ const CourierEntry = () => {
 
   React.useEffect(() => {
     calculatePricing();
-  }, [formData.items, formData.delivery.timeSlot]);
+  }, [formData.items, formData.delivery.timeSlot, calculatePricing]);
 
   const submitCourierShipment = async () => {
     setLoading(true);

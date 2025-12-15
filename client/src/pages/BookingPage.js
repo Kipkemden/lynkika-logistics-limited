@@ -96,6 +96,11 @@ const BookingPage = () => {
     'Flexible'
   ];
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   useEffect(() => {
     if (service === 'scheduled') {
       fetchRoutes();

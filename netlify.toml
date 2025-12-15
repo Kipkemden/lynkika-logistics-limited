@@ -9,12 +9,41 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Redirect all API calls to main serverless function
+# Redirect API calls with proper path preservation
+[[redirects]]
+  from = "/api/quotes"
+  to = "/.netlify/functions/api/quotes"
+  status = 200
+
+[[redirects]]
+  from = "/api/quotes/*"
+  to = "/.netlify/functions/api/quotes/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/bookings"
+  to = "/.netlify/functions/api/bookings"
+  status = 200
+
+[[redirects]]
+  from = "/api/bookings/*"
+  to = "/.netlify/functions/api/bookings/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/tracking"
+  to = "/.netlify/functions/api/tracking"
+  status = 200
+
+[[redirects]]
+  from = "/api/tracking/*"
+  to = "/.netlify/functions/api/tracking/:splat"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
-  force = true
 
 # Redirect all other requests to React app (SPA routing)
 [[redirects]]

@@ -31,23 +31,23 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Handle root path routing - Netlify strips the /api prefix
+// Handle Netlify path routing
 app.use((req, res, next) => {
-  // If the path is root and we have a query or it's a POST, it might be a quotes request
-  if (req.path === '/' && req.method === 'POST') {
-    req.url = '/quotes';
-    req.path = '/quotes';
-  }
+  console.log(`Incoming request: ${req.method} ${req.path} - Original: ${req.originalUrl}`);
+  
+  // Netlify sends paths like /quotes, /bookings, etc. (without /api prefix)
+  // So we don't need to modify the path, just log for debugging
   next();
 });
 
-// Test quotes endpoint
+// Test quotes endpoint - this should catch POST /quotes
 app.post('/quotes', (req, res) => {
   res.json({
-    message: 'Quotes endpoint reached!',
+    message: 'Test quotes endpoint reached!',
     path: req.path,
     method: req.method,
-    body: req.body
+    originalUrl: req.originalUrl,
+    body: req.body ? 'Body received' : 'No body'
   });
 });
 
@@ -140,19 +140,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Handle root path requests
-app.use('/', (req, res, next) => {
-  if (req.path === '/' && req.method === 'GET') {
-    return res.json({
-      message: 'Lynkika Logistics API',
-      status: 'running',
-      availableRoutes: ['/quotes', '/bookings', '/tracking', '/routes', '/auth', '/admin', '/health', '/debug'],
-      receivedPath: req.path,
-      receivedMethod: req.method,
-      originalUrl: req.originalUrl
-    });
-  }
-  next();
+// Handle root path requests (GET only)
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Lynkika Logistics API',
+    status: 'running',
+    availableRoutes: ['/quotes', '/bookings', '/tracking', '/routes', '/auth', '/admin', '/health', '/debug'],
+    receivedPath: req.path,
+    receivedMethod: req.method,
+    originalUrl: req.originalUrl
+  });
 });
 
 // Catch all for debugging

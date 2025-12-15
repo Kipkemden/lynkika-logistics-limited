@@ -102,6 +102,17 @@ const BookingPage = () => {
     }
   }, [service]);
 
+  const fetchCapacityData = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `/api/routes/${selectedRoute}/capacity/${formData.pickup.date.format('YYYY-MM-DD')}`
+      );
+      setCapacityData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch capacity data');
+    }
+  }, [selectedRoute, formData.pickup.date]);
+
   useEffect(() => {
     if (selectedRoute && formData.pickup.date) {
       fetchCapacityData();
@@ -157,16 +168,6 @@ const BookingPage = () => {
     return nextDeparture;
   };
 
-  const fetchCapacityData = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        `/api/routes/${selectedRoute}/capacity/${formData.pickup.date.format('YYYY-MM-DD')}`
-      );
-      setCapacityData(response.data);
-    } catch (error) {
-      console.error('Failed to fetch capacity data');
-    }
-  }, [selectedRoute, formData.pickup.date]);
 
   const handleNext = () => {
     setActiveStep((prev) => prev + 1);

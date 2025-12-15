@@ -58,14 +58,6 @@ const BookingManagement = () => {
   });
   const [tabValue, setTabValue] = useState(0);
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/ops-control-center');
-      return;
-    }
-    fetchBookings();
-  }, [user, navigate, page, statusFilter, serviceFilter, fetchBookings]);
-
   const fetchBookings = useCallback(async () => {
     try {
       const params = new URLSearchParams({
@@ -85,6 +77,14 @@ const BookingManagement = () => {
       setLoading(false);
     }
   }, [page, statusFilter, serviceFilter]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/ops-control-center');
+      return;
+    }
+    fetchBookings();
+  }, [user, navigate, page, statusFilter, serviceFilter, fetchBookings]);
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);

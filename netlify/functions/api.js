@@ -11,11 +11,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
-});
-
 // Initialize Supabase with error handling
 let supabaseInitialized = false;
 try {
@@ -26,33 +21,82 @@ try {
   console.error('Supabase initialization failed:', error);
 }
 
-// Load routes one by one with individual error handling
-const routes = [
-  { path: '/auth', file: '../../routes/auth' },
-  { path: '/quotes', file: '../../routes/quotes' },
-  { path: '/bookings', file: '../../routes/bookings' },
-  { path: '/tracking', file: '../../routes/tracking' },
-  { path: '/routes', file: '../../routes/routes' },
-  { path: '/admin', file: '../../routes/admin' },
-  { path: '/security', file: '../../routes/security' }
-];
-
-routes.forEach(({ path, file }) => {
-  try {
-    const router = require(file);
-    app.use(path, router);
-    console.log(`✓ Loaded route: ${path}`);
-  } catch (error) {
-    console.error(`✗ Failed to load route ${path}:`, error.message);
-    // Create a fallback route for this path
-    app.use(path, (req, res) => {
-      res.status(500).json({ 
-        message: `${path} temporarily unavailable`,
-        error: `Route loading failed: ${error.message}`
-      });
-    });
-  }
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Netlify function is running',
+    supabaseInitialized,
+    timestamp: new Date().toISOString()
+  });
 });
+
+// Load routes with better error handling
+try {
+  const quotesRouter = require('../../routes/quotes');
+  app.use('/quotes', quotesRouter);
+  console.log('✓ Loaded quotes route');
+} catch (error) {
+  console.error('✗ Failed to load quotes route:', error);
+  app.use('/quotes', (req, res) => {
+    res.status(500).json({ 
+      message: 'Quotes service temporarily unavailable',
+      error: error.message
+    });
+  });
+}
+
+try {
+  const bookingsRouter = require('../../routes/bookings');
+  app.use('/bookings', bookingsRouter);
+  console.log('✓ Loaded bookings route');
+} catch (error) {
+  console.error('✗ Failed to load bookings route:', error);
+  app.use('/bookings', (req, res) => {
+    res.status(500).json({ 
+      message: 'Bookings service temporarily unavailable',
+      error: error.message
+    });
+  });
+}
+
+try {
+  const trackingRouter = require('../../routes/tracking');
+  app.use('/tracking', trackingRouter);
+  console.log('✓ Loaded tracking route');
+} catch (error) {
+  console.error('✗ Failed to load tracking route:', error);
+  app.use('/tracking', (req, res) => {
+    res.status(500).json({ 
+      message: 'Tracking service temporarily unavailable',
+      error: error.message
+    });
+  });
+}
+
+try {
+  const routesRouter = require('../../routes/routes');
+  app.use('/routes', routesRouter);
+  console.log('✓ Loaded routes route');
+} catch (error) {
+  console.error('✗ Failed to load routes route:', error);
+}
+
+try {
+  const authRouter = require('../../routes/auth');
+  app.use('/auth', authRouter);
+  console.log('✓ Loaded auth route');
+} catch (error) {
+  console.error('✗ Failed to load auth route:', error);
+}
+
+try {
+  const adminRouter = require('../../routes/admin');
+  app.use('/admin', adminRouter);
+  console.log('✓ Loaded admin route');
+} catch (error) {
+  console.error('✗ Failed to load admin route:', error);
+}
 
 // Debug endpoint
 app.get('/debug', (req, res) => {
@@ -61,7 +105,19 @@ app.get('/debug', (req, res) => {
     supabaseInitialized,
     nodeVersion: process.version,
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Catch all for debugging
+app.use('*', (req, res) => {
+  res.status(404).json({
+    message: 'Route not found',
+    path: req.path,
+    method: req.method,
+    availableRoutes: ['/quotes', '/bookings', '/tracking', '/routes', '/auth', '/admin', '/health', '/debug']
   });
 });
 
@@ -70,7 +126,8 @@ app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ 
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+    path: req.path
   });
 });
 

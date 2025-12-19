@@ -26,13 +26,18 @@ ALTER SEQUENCE IF EXISTS bookings_id_seq RESTART WITH 1;
 -- =====================================================
 
 -- Insert admin users with properly hashed passwords
--- Passwords: LynkikaAdmin2024!, OpsManager2024!, Dispatcher2024!
+-- Super Admin: LynkikaAdmin2024!
+-- Operations Manager: OpsManager2024!
+-- Lead Dispatcher: Dispatcher2024!
+-- Nairobi Dispatcher: NairobiDispatch2024!
+-- Mombasa Dispatcher: MombasaDispatch2024!
+
 INSERT INTO users (email, password_hash, role, name, is_active) VALUES
-('admin@lynkika.co.ke', '$2a$12$rQZ8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2e', 'super_admin', 'System Administrator', true),
-('operations@lynkika.co.ke', '$2a$12$rQZ8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2e', 'operations_manager', 'Operations Manager', true),
-('dispatch@lynkika.co.ke', '$2a$12$rQZ8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2e', 'dispatcher', 'Lead Dispatcher', true),
-('dispatch2@lynkika.co.ke', '$2a$12$rQZ8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2e', 'dispatcher', 'Dispatcher - Nairobi', true),
-('dispatch3@lynkika.co.ke', '$2a$12$rQZ8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2eF8vHFx7YzGzJ5K9X2.2e', 'dispatcher', 'Dispatcher - Mombasa', true);
+('admin@lynkika.co.ke', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBdXfs2Stk5v9W', 'super_admin', 'System Administrator', true),
+('operations@lynkika.co.ke', '$2b$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'operations_manager', 'Operations Manager', true),
+('dispatch@lynkika.co.ke', '$2b$12$Dwt1BjqBpXvf7uf/Z3Ne6OeWs0qGdHGsLVG/r/4L2tRqvd9lI/6nO', 'dispatcher', 'Lead Dispatcher', true),
+('dispatch2@lynkika.co.ke', '$2b$12$K8geDuLh9uyf6C8E6fqdgOmR6lCdgz.1FmWn65T2JvYK3CdqvJ/dS', 'dispatcher', 'Dispatcher - Nairobi', true),
+('dispatch3@lynkika.co.ke', '$2b$12$gf19G1mVn5JiI4S4NiNGI.MQamFnNvjjMM0Q/tt.3DMuQEX4vIbm6', 'dispatcher', 'Dispatcher - Mombasa', true);
 
 -- =====================================================
 -- KENYAN TRANSPORTATION ROUTES

@@ -100,4 +100,15 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Security and credentials
+ADMIN_CREDENTIALS.md
+credentials.txt
+passwords.txt
+secrets/
+
+# Application logs
+logs/
+*.log
+
 node_modules

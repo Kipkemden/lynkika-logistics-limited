@@ -2,12 +2,35 @@ const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
+const morgan = require('morgan');
+const expressWinston = require('express-winston');
 require('dotenv').config();
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { logger, logSecurityEvent, logPerformance } = require('./config/logger');
 
 const app = express();
+
+// Trust proxy for rate limiting
+app.set('trust proxy', 1);
+
+// Request logging middleware
+app.use(morgan('combined', {
+  stream: {
+    write: (message) => logger.info(message.trim())
+  }
+}));
+
+// Express Winston logger for detailed request/response logging
+app.use(expressWinston.logger({
+  winstonInstance: logger,
+  meta: true,
+  msg: "HTTP {{req.method}} {{req.url}}",
+  expressFormat: true,
+  colorize: false,
+  ignoreRoute: (req, res) => false
+}));
 
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
@@ -77,6 +100,8 @@ app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/security', require('./routes/security'));
+app.use('/api/errors', require('./routes/errors'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Serve static files in production with caching
 if (process.env.NODE_ENV === 'production') {
@@ -102,13 +127,76 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Error handling middleware
+// Enhanced error handling middleware
+app.use(expressWinston.errorLogger({
+  winstonInstance: logger
+}));
+
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  // Log the error with context
+  logger.error('Unhandled Error', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: req.user?.userId || 'anonymous'
+  });
+
+  // Security event for suspicious errors
+  if (err.message.includes('SQL') || err.message.includes('injection')) {
+    logSecurityEvent('POTENTIAL_SQL_INJECTION', req.user?.userId, {
+      error: err.message,
+      url: req.url
+    }, req.ip, req.get('User-Agent'));
+  }
+
+  // Don't leak error details in production
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Internal server error' 
+    : err.message;
+
+  res.status(err.status || 500).json({ 
+    message,
+    requestId: req.id || Date.now()
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const healthCheck = {
+    uptime: process.uptime(),
+    message: 'OK',
+    timestamp: Date.now(),
+    environment: process.env.NODE_ENV,
+    version: process.env.npm_package_version || '1.0.0'
+  };
+  
+  res.status(200).json(healthCheck);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Lynkika Logistics Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  logger.info(`Lynkika Logistics Server running on port ${PORT}`, {
+    environment: process.env.NODE_ENV,
+    port: PORT,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  logger.error('Server Error', { error: error.message, stack: error.stack });
 });

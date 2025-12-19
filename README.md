@@ -1,5 +1,7 @@
 # Lynkika Logistics Platform
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/69ab0b99-8ff3-40b3-8947-985a5e04257c/deploy-status)](https://app.netlify.com/projects/lynkika/deploys)
+
 Enterprise-grade logistics and transportation management system for Kenya, featuring real-time tracking, role-based access control, and comprehensive analytics.
 
 ## 🚀 Features

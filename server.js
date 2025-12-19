@@ -99,6 +99,7 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/routes', require('./routes/routes'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin/monitoring', require('./routes/monitoring'));
 app.use('/api/security', require('./routes/security'));
 app.use('/api/errors', require('./routes/errors'));
 app.use('/api/analytics', require('./routes/analytics'));

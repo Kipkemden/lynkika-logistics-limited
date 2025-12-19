@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const RouteManagement = lazy(() => import('./pages/admin/RouteManagement'));
 const BookingManagement = lazy(() => import('./pages/admin/BookingManagement'));
 const CourierEntry = lazy(() => import('./pages/admin/CourierEntry'));
+const SystemMonitoring = lazy(() => import('./pages/admin/SystemMonitoring'));
 
 // Loading component
 const PageLoader = () => (
@@ -53,6 +54,7 @@ function App() {
                 <Route path="/ops-control-center/routes" element={<RouteManagement />} />
                 <Route path="/ops-control-center/bookings" element={<BookingManagement />} />
                 <Route path="/ops-control-center/courier" element={<CourierEntry />} />
+                <Route path="/ops-control-center/monitoring" element={<SystemMonitoring />} />
               </Routes>
             </Suspense>
           </Router>

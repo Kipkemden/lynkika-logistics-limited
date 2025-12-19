@@ -5,6 +5,7 @@ import { CssBaseline, CircularProgress, Box } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import theme from './theme';
+import { AuthProvider } from './context/AuthContext';
 
 // Lazy load components for better performance
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -18,9 +19,6 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const RouteManagement = lazy(() => import('./pages/admin/RouteManagement'));
 const BookingManagement = lazy(() => import('./pages/admin/BookingManagement'));
 const CourierEntry = lazy(() => import('./pages/admin/CourierEntry'));
-
-// Context
-import { AuthProvider } from './context/AuthContext';
 
 // Loading component
 const PageLoader = () => (

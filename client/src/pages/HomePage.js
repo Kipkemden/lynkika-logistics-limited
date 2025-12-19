@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -53,7 +53,7 @@ const HomePage = () => {
     }
   }, []);
 
-  const services = [
+  const services = useMemo(() => [
     {
       title: 'Moving Services',
       description: 'Complete residential and commercial moving solutions with professional packing and handling.',
@@ -118,9 +118,9 @@ const HomePage = () => {
       action: null,
       buttonText: 'Visit Our Locations'
     }
-  ];
+  ], [navigate]);
 
-  const courierLocations = [
+  const courierLocations = useMemo(() => [
     {
       name: 'Nairobi CBD Branch',
       address: 'Kimathi Street, Nairobi CBD, Kenya',
@@ -139,9 +139,9 @@ const HomePage = () => {
       phone: '+254 714 883 717',
       hours: 'Mon-Fri: 7AM-7PM, Sat: 8AM-5PM'
     }
-  ];
+  ], []);
 
-  const features = [
+  const features = useMemo(() => [
     {
       title: 'Real-time Tracking',
       description: 'Monitor your shipments every step of the way',
@@ -157,7 +157,7 @@ const HomePage = () => {
       description: 'Reliable scheduling with 99% on-time performance',
       icon: <Schedule sx={{ fontSize: 32, color: '#1E88E5' }} />
     }
-  ];
+  ], []);
 
   return (
     <Box>

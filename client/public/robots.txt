@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /ops-control-center/
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://lynkika.co.ke/sitemap.xml
+
+# Specific bot instructions
+User-agent: Googlebot
+Allow: /
+Disallow: /ops-control-center/
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Disallow: /ops-control-center/
+Crawl-delay: 2

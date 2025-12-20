@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -16,7 +16,6 @@ import {
   Paper,
   Chip,
   LinearProgress,
-  Alert,
   Button,
   Tabs,
   Tab,
@@ -33,13 +32,11 @@ import {
   Refresh,
   Download,
   Visibility,
-  Warning,
   CheckCircle,
   TrendingUp,
-  Storage,
-  NetworkCheck
+  Storage
 } from '@mui/icons-material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AdminLayout from '../../components/admin/AdminLayout';
 import axios from 'axios';
 
@@ -54,57 +51,57 @@ const SystemMonitoring = () => {
   const [loading, setLoading] = useState(true);
 
   // Fetch system health
-  const fetchSystemHealth = async () => {
+  const fetchSystemHealth = useCallback(async () => {
     try {
       const response = await axios.get('/health');
       setSystemHealth(response.data);
     } catch (error) {
       console.error('Failed to fetch system health:', error);
     }
-  };
+  }, []);
 
   // Fetch performance metrics
-  const fetchPerformanceMetrics = async () => {
+  const fetchPerformanceMetrics = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/monitoring/performance');
       setPerformanceMetrics(response.data);
     } catch (error) {
       console.error('Failed to fetch performance metrics:', error);
     }
-  };
+  }, []);
 
   // Fetch error logs
-  const fetchErrorLogs = async () => {
+  const fetchErrorLogs = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/monitoring/errors');
       setErrorLogs(response.data);
     } catch (error) {
       console.error('Failed to fetch error logs:', error);
     }
-  };
+  }, []);
 
   // Fetch security events
-  const fetchSecurityEvents = async () => {
+  const fetchSecurityEvents = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/monitoring/security');
       setSecurityEvents(response.data);
     } catch (error) {
       console.error('Failed to fetch security events:', error);
     }
-  };
+  }, []);
 
   // Fetch cache statistics
-  const fetchCacheStats = async () => {
+  const fetchCacheStats = useCallback(async () => {
     try {
       const response = await axios.get('/api/admin/monitoring/cache');
       setCacheStats(response.data);
     } catch (error) {
       console.error('Failed to fetch cache stats:', error);
     }
-  };
+  }, []);
 
   // Fetch all data
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
       fetchSystemHealth(),
@@ -114,11 +111,11 @@ const SystemMonitoring = () => {
       fetchCacheStats()
     ]);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [fetchAllData]);
 
   // Auto-refresh data
   useEffect(() => {
@@ -129,7 +126,7 @@ const SystemMonitoring = () => {
     }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, [realTimeUpdates]);
+  }, [realTimeUpdates, fetchAllData]);
 
   // Clear cache
   const clearCache = async () => {

@@ -5,10 +5,6 @@ const router = express.Router();
 // Performance metrics endpoint
 router.post('/performance', async (req, res) => {
   try {
-    // Temporarily disable analytics processing
-    res.status(200).json({ message: 'Analytics temporarily disabled' });
-    return;
-
     const {
       name,
       value,
@@ -18,7 +14,7 @@ router.post('/performance', async (req, res) => {
       metadata
     } = req.body;
 
-    const clientIP = req.ip || req.connection.remoteAddress;
+    const clientIP = req.ip || req.connection?.remoteAddress || 'unknown';
 
     // Log performance metric
     logPerformance(name, value, {
@@ -49,7 +45,7 @@ router.post('/performance', async (req, res) => {
       });
     }
 
-    res.status(200).json({ message: 'Metric recorded' });
+    res.status(200).json({ message: 'Metric recorded', success: true });
 
   } catch (error) {
     logger.error('Failed to record performance metric', {
@@ -57,24 +53,21 @@ router.post('/performance', async (req, res) => {
       stack: error.stack
     });
     
-    res.status(500).json({ message: 'Failed to record metric' });
+    // Return success even on error to prevent client-side retry loops
+    res.status(200).json({ message: 'Metric received', success: false });
   }
 });
 
 // Business events endpoint
 router.post('/events', async (req, res) => {
   try {
-    // Temporarily disable analytics processing
-    res.status(200).json({ message: 'Analytics temporarily disabled' });
-    return;
-
     const {
       event,
       properties
     } = req.body;
 
-    const clientIP = req.ip || req.connection.remoteAddress;
-    const userId = req.user?.userId || properties.userId || 'anonymous';
+    const clientIP = req.ip || req.connection?.remoteAddress || 'unknown';
+    const userId = req.user?.userId || properties?.userId || 'anonymous';
 
     // Log business event
     logBusinessEvent(event, userId, {
@@ -90,7 +83,9 @@ router.post('/events', async (req, res) => {
       'payment_completed',
       'user_registered',
       'login_success',
-      'service_booked'
+      'service_booked',
+      'page_view',
+      'admin_login'
     ];
 
     if (importantEvents.includes(event)) {
@@ -104,7 +99,7 @@ router.post('/events', async (req, res) => {
       });
     }
 
-    res.status(200).json({ message: 'Event tracked' });
+    res.status(200).json({ message: 'Event tracked', success: true });
 
   } catch (error) {
     logger.error('Failed to track event', {
@@ -112,7 +107,8 @@ router.post('/events', async (req, res) => {
       stack: error.stack
     });
     
-    res.status(500).json({ message: 'Failed to track event' });
+    // Return success even on error to prevent client-side retry loops
+    res.status(200).json({ message: 'Event received', success: false });
   }
 });
 

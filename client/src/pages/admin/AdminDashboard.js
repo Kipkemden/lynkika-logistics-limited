@@ -41,6 +41,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
+import { trackEvent } from '../../utils/analytics';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -67,6 +68,14 @@ const AdminDashboard = () => {
       navigate('/ops-control-center');
       return;
     }
+    
+    // Track dashboard view
+    trackEvent('admin_dashboard_view', {
+      userId: user.email,
+      role: user.role,
+      timestamp: new Date().toISOString()
+    });
+    
     fetchDashboardData();
   }, [user, navigate]);
 

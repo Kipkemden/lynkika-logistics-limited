@@ -63,6 +63,44 @@ app.use((req, res, next) => {
   next();
 });
 
+// Embedded analytics routes (simplified for reliability)
+app.post('/analytics/performance', async (req, res) => {
+  try {
+    const { name, value, timestamp, url, userAgent, metadata } = req.body;
+    const clientIP = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+
+    console.log('📊 Performance metric:', { name, value, url, clientIP });
+
+    // Log to console for now (can be enhanced later)
+    console.log(`Performance: ${name} = ${value}ms at ${url}`);
+
+    res.status(200).json({ message: 'Metric recorded', success: true });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(200).json({ message: 'Metric received', success: false });
+  }
+});
+
+app.post('/analytics/events', async (req, res) => {
+  try {
+    const { event, properties } = req.body;
+    const clientIP = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+
+    console.log('📊 Business event:', { event, properties, clientIP });
+
+    // Log important events
+    const importantEvents = ['quote_requested', 'booking_created', 'admin_login', 'page_view'];
+    if (importantEvents.includes(event)) {
+      console.log(`🎯 Important Event: ${event}`, properties);
+    }
+
+    res.status(200).json({ message: 'Event tracked', success: true });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(200).json({ message: 'Event received', success: false });
+  }
+});
+
 // Embedded auth routes (since external files aren't bundled properly)
 const jwt = require('jsonwebtoken');
 
@@ -168,6 +206,9 @@ app.post('/auth/login', async (req, res) => {
       console.log('📤 SENDING SUCCESS RESPONSE');
       console.log('📤 Response data:', JSON.stringify(responseData, null, 2));
       console.log('🔐 === LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
+      
+      // Track admin login event
+      console.log('📊 Tracking admin login event');
       
       return res.json(responseData);
     }

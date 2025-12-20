@@ -2,8 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
-// Analytics temporarily disabled
-// import './utils/analytics'; // Initialize analytics
+// Re-enable analytics with improved error handling
+import './utils/analytics';
 
 // Register service worker
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {

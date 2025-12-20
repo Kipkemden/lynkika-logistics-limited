@@ -12,7 +12,10 @@ const serverlessHandler = serverless(app, {
 
 // Basic middleware
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: ['https://lynkika.netlify.app', 'https://lynkika.co.ke', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -42,74 +45,35 @@ app.use((req, res, next) => {
   next();
 });
 
-// Remove test endpoints - they were intercepting real requests
+// Load all routes with better error handling
+const routes = [
+  { path: '/auth', file: '../../routes/auth', name: 'auth' },
+  { path: '/quotes', file: '../../routes/quotes', name: 'quotes' },
+  { path: '/bookings', file: '../../routes/bookings', name: 'bookings' },
+  { path: '/tracking', file: '../../routes/tracking', name: 'tracking' },
+  { path: '/routes', file: '../../routes/routes', name: 'routes' },
+  { path: '/admin', file: '../../routes/admin', name: 'admin' },
+  { path: '/admin/monitoring', file: '../../routes/monitoring', name: 'monitoring' },
+  { path: '/security', file: '../../routes/security', name: 'security' },
+  { path: '/errors', file: '../../routes/errors', name: 'errors' },
+  { path: '/analytics', file: '../../routes/analytics', name: 'analytics' }
+];
 
-// Load routes with better error handling
-try {
-  const quotesRouter = require('../../routes/quotes');
-  app.use('/quotes', quotesRouter);
-  console.log('✓ Loaded quotes route');
-} catch (error) {
-  console.error('✗ Failed to load quotes route:', error);
-  app.use('/quotes', (req, res) => {
-    res.status(500).json({ 
-      message: 'Quotes service temporarily unavailable',
-      error: error.message
+routes.forEach(route => {
+  try {
+    const router = require(route.file);
+    app.use(route.path, router);
+    console.log(`✓ Loaded ${route.name} route`);
+  } catch (error) {
+    console.error(`✗ Failed to load ${route.name} route:`, error.message);
+    app.use(route.path, (req, res) => {
+      res.status(500).json({ 
+        message: `${route.name} service temporarily unavailable`,
+        error: error.message
+      });
     });
-  });
-}
-
-try {
-  const bookingsRouter = require('../../routes/bookings');
-  app.use('/bookings', bookingsRouter);
-  console.log('✓ Loaded bookings route');
-} catch (error) {
-  console.error('✗ Failed to load bookings route:', error);
-  app.use('/bookings', (req, res) => {
-    res.status(500).json({ 
-      message: 'Bookings service temporarily unavailable',
-      error: error.message
-    });
-  });
-}
-
-try {
-  const trackingRouter = require('../../routes/tracking');
-  app.use('/tracking', trackingRouter);
-  console.log('✓ Loaded tracking route');
-} catch (error) {
-  console.error('✗ Failed to load tracking route:', error);
-  app.use('/tracking', (req, res) => {
-    res.status(500).json({ 
-      message: 'Tracking service temporarily unavailable',
-      error: error.message
-    });
-  });
-}
-
-try {
-  const routesRouter = require('../../routes/routes');
-  app.use('/routes', routesRouter);
-  console.log('✓ Loaded routes route');
-} catch (error) {
-  console.error('✗ Failed to load routes route:', error);
-}
-
-try {
-  const authRouter = require('../../routes/auth');
-  app.use('/auth', authRouter);
-  console.log('✓ Loaded auth route');
-} catch (error) {
-  console.error('✗ Failed to load auth route:', error);
-}
-
-try {
-  const adminRouter = require('../../routes/admin');
-  app.use('/admin', adminRouter);
-  console.log('✓ Loaded admin route');
-} catch (error) {
-  console.error('✗ Failed to load admin route:', error);
-}
+  }
+});
 
 // Debug endpoint
 app.get('/debug', (req, res) => {
@@ -122,19 +86,16 @@ app.get('/debug', (req, res) => {
     path: req.path,
     originalUrl: req.originalUrl,
     method: req.method,
-    headers: req.headers,
-    query: req.query
+    availableRoutes: routes.map(r => r.path)
   });
 });
-
-
 
 // Handle root path requests (GET only)
 app.get('/', (req, res) => {
   res.json({
     message: 'Lynkika Logistics API',
     status: 'running',
-    availableRoutes: ['/quotes', '/bookings', '/tracking', '/routes', '/auth', '/admin', '/health', '/debug'],
+    availableRoutes: routes.map(r => r.path),
     receivedPath: req.path,
     receivedMethod: req.method,
     originalUrl: req.originalUrl
@@ -148,7 +109,7 @@ app.use('*', (req, res) => {
     path: req.path,
     method: req.method,
     originalUrl: req.originalUrl,
-    availableRoutes: ['/quotes', '/bookings', '/tracking', '/routes', '/auth', '/admin', '/health', '/debug']
+    availableRoutes: routes.map(r => r.path)
   });
 });
 

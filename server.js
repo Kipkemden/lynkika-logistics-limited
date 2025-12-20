@@ -64,18 +64,38 @@ app.use(helmet({
   }
 }));
 
-// Enhanced rate limiting
+// Enhanced rate limiting - more permissive for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // increased from 100 to 1000 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: 900
+  },
+  skip: (req) => {
+    // Skip rate limiting for health checks and development
+    return req.path === '/health' || process.env.NODE_ENV === 'development';
   }
 });
 app.use(limiter);
+
+// Specific rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 login attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many login attempts, please try again later.',
+    retryAfter: 900
+  },
+  skip: (req) => {
+    // Skip in development
+    return process.env.NODE_ENV === 'development';
+  }
+});
 
 // CORS configuration
 app.use(cors({
@@ -93,7 +113,7 @@ const supabase = require('./config/supabase');
 console.log('Supabase client initialized');
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/quotes', require('./routes/quotes'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/tracking', require('./routes/tracking'));

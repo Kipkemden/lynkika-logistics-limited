@@ -1,12 +1,29 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const userService = require('../services/userService');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Auth-specific rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 login attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many login attempts, please try again later.',
+    retryAfter: 900
+  },
+  skip: (req) => {
+    // Skip in development
+    return process.env.NODE_ENV === 'development';
+  }
+});
+
 // Admin login - with detailed debugging
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     console.log('Login attempt received:', { email: req.body.email });
     
@@ -72,6 +89,35 @@ router.get('/me', authMiddleware, async (req, res) => {
     res.json(user);
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Test login endpoint for development
+router.post('/test-login', async (req, res) => {
+  if (process.env.NODE_ENV !== 'development') {
+    return res.status(404).json({ message: 'Not found' });
+  }
+
+  try {
+    // Return a test token for development
+    const testToken = jwt.sign(
+      { userId: 1, role: 'super_admin' },
+      process.env.JWT_SECRET || 'test-secret',
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      token: testToken,
+      user: {
+        id: 1,
+        name: 'Test Admin',
+        email: 'admin@lynkika.co.ke',
+        role: 'super_admin'
+      }
+    });
+  } catch (error) {
+    console.error('Test login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

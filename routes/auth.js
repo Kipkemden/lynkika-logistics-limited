@@ -6,7 +6,7 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Auth-specific rate limiting
+// Auth-specific rate limiting - completely disabled in development
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 login attempts per 15 minutes
@@ -17,13 +17,13 @@ const authLimiter = rateLimit({
     retryAfter: 900
   },
   skip: (req) => {
-    // Skip in development
-    return process.env.NODE_ENV === 'development';
+    // Always skip in development, only apply in production
+    return process.env.NODE_ENV !== 'production';
   }
 });
 
 // Admin login - with database bypass for troubleshooting
-router.post('/login', process.env.NODE_ENV === 'production' ? authLimiter : (req, res, next) => next(), async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     console.log('Login attempt received:', { email: req.body.email });
     

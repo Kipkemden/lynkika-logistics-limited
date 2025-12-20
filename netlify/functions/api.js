@@ -21,27 +21,45 @@ app.use(express.urlencoded({ extended: true }));
 
 // Initialize Supabase with error handling
 let supabaseInitialized = false;
+let supabaseError = null;
 try {
   const supabase = require('../../config/supabase');
-  console.log('Supabase client initialized');
+  console.log('✅ Supabase client initialized successfully');
   supabaseInitialized = true;
 } catch (error) {
-  console.error('Supabase initialization failed:', error);
+  console.error('❌ Supabase initialization failed:', error.message);
+  console.error('Stack:', error.stack);
+  supabaseError = error.message;
+  supabaseInitialized = false;
 }
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
+  console.log('🏥 Health check requested');
+  const healthData = { 
     status: 'OK', 
     message: 'Netlify function is running',
     supabaseInitialized,
-    timestamp: new Date().toISOString()
-  });
+    supabaseError: supabaseError || null,
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+      hasJwtSecret: !!process.env.JWT_SECRET
+    }
+  };
+  console.log('🏥 Health check response:', healthData);
+  res.json(healthData);
 });
 
 // Log requests for debugging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Original: ${req.originalUrl}`);
+  console.log(`📥 ${req.method} ${req.path} - Original: ${req.originalUrl}`);
+  console.log('📥 Headers:', JSON.stringify(req.headers, null, 2));
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('📥 Body:', JSON.stringify(req.body, null, 2));
+  }
   next();
 });
 
@@ -63,13 +81,16 @@ routes.forEach(route => {
   try {
     const router = require(route.file);
     app.use(route.path, router);
-    console.log(`✓ Loaded ${route.name} route`);
+    console.log(`✅ Loaded ${route.name} route successfully`);
   } catch (error) {
-    console.error(`✗ Failed to load ${route.name} route:`, error.message);
+    console.error(`❌ Failed to load ${route.name} route:`, error.message);
+    console.error(`❌ Stack trace:`, error.stack);
     app.use(route.path, (req, res) => {
+      console.error(`🚨 ${route.name} service error for ${req.method} ${req.path}`);
       res.status(500).json({ 
         message: `${route.name} service temporarily unavailable`,
-        error: error.message
+        error: error.message,
+        timestamp: new Date().toISOString()
       });
     });
   }
@@ -115,11 +136,15 @@ app.use('*', (req, res) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+  console.error('🔥 Server error:', err);
+  console.error('🔥 Stack:', err.stack);
+  console.error('🔥 Path:', req.path);
+  console.error('🔥 Method:', req.method);
   res.status(500).json({ 
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
-    path: req.path
+    path: req.path,
+    timestamp: new Date().toISOString()
   });
 });
 

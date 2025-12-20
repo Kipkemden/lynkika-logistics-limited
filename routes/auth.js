@@ -24,19 +24,25 @@ const authLimiter = rateLimit({
 
 // Admin login - with database bypass for troubleshooting
 router.post('/login', async (req, res) => {
-  console.log('\n=== LOGIN ATTEMPT STARTED ===');
-  console.log('Timestamp:', new Date().toISOString());
-  console.log('Environment:', process.env.NODE_ENV);
-  console.log('JWT Secret exists:', !!process.env.JWT_SECRET);
+  console.log('\n🔐 === LOGIN ATTEMPT STARTED ===');
+  console.log('🔐 Timestamp:', new Date().toISOString());
+  console.log('🔐 Environment:', process.env.NODE_ENV);
+  console.log('🔐 JWT Secret exists:', !!process.env.JWT_SECRET);
+  console.log('🔐 Supabase URL exists:', !!process.env.SUPABASE_URL);
+  console.log('🔐 Supabase Key exists:', !!process.env.SUPABASE_ANON_KEY);
   
   try {
     const { email, password } = req.body;
-    console.log('Extracted email:', email);
-    console.log('Password provided:', !!password);
+    console.log('🔐 Extracted email:', email);
+    console.log('🔐 Password provided:', !!password);
+    console.log('🔐 Request headers:', JSON.stringify(req.headers, null, 2));
 
     if (!email || !password) {
       console.log('❌ VALIDATION FAILED: Missing email or password');
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ 
+        message: 'Email and password are required',
+        timestamp: new Date().toISOString()
+      });
     }
 
     console.log('✅ VALIDATION PASSED: Email and password provided');
@@ -59,15 +65,18 @@ router.post('/login', async (req, res) => {
     };
 
     console.log('🔍 CHECKING HARDCODED CREDENTIALS');
-    console.log('Email in admin list:', email in adminCredentials);
+    console.log('🔍 Email in admin list:', email in adminCredentials);
+    console.log('🔍 Available admin emails:', Object.keys(adminCredentials));
 
     // Check if this is a known admin credential
     if (adminCredentials[email] && adminCredentials[email] === password) {
       console.log('🎉 HARDCODED CREDENTIAL MATCH - Using bypass for:', email);
       
       const jwtSecret = process.env.JWT_SECRET || 'LynkikaSecureJWT2024!ProductionKey';
+      console.log('🔐 JWT Secret length:', jwtSecret.length);
       
       const tokenPayload = { userId: email, role: userRoles[email] };
+      console.log('🔐 Token payload:', tokenPayload);
       
       const token = jwt.sign(
         tokenPayload,
@@ -76,6 +85,7 @@ router.post('/login', async (req, res) => {
       );
       
       console.log('✅ JWT TOKEN GENERATED successfully');
+      console.log('✅ Token length:', token.length);
 
       const responseData = {
         token,
@@ -88,22 +98,31 @@ router.post('/login', async (req, res) => {
       };
       
       console.log('📤 SENDING SUCCESS RESPONSE');
-      console.log('=== LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
+      console.log('📤 Response data:', JSON.stringify(responseData, null, 2));
+      console.log('🔐 === LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
       
       return res.json(responseData);
     }
 
     console.log('❌ HARDCODED CREDENTIAL MISMATCH');
-    console.log('=== LOGIN ATTEMPT FAILED ===\n');
-    return res.status(401).json({ message: 'Invalid credentials' });
+    console.log('❌ Provided email:', email);
+    console.log('❌ Password match:', adminCredentials[email] === password);
+    console.log('🔐 === LOGIN ATTEMPT FAILED ===\n');
+    return res.status(401).json({ 
+      message: 'Invalid credentials',
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error('💥 CRITICAL LOGIN ERROR:', error);
-    console.log('=== LOGIN ATTEMPT FAILED WITH ERROR ===\n');
+    console.error('💥 Error message:', error.message);
+    console.error('💥 Error stack:', error.stack);
+    console.log('🔐 === LOGIN ATTEMPT FAILED WITH ERROR ===\n');
     
     res.status(500).json({ 
       message: 'Authentication service temporarily unavailable',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      timestamp: new Date().toISOString()
     });
   }
 });

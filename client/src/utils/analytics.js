@@ -93,8 +93,12 @@ class PerformanceMonitor {
   }
 
   async sendMetric(metric) {
+    // DISABLE ANALYTICS COMPLETELY FOR NOW
+    console.log('Analytics disabled:', metric.name);
+    return;
+    
     // Skip analytics in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
       console.log('Analytics disabled in development:', metric.name);
       return;
     }
@@ -129,8 +133,12 @@ class PerformanceMonitor {
   }
 
   async sendEvent(event) {
+    // DISABLE ANALYTICS COMPLETELY FOR NOW
+    console.log('Analytics disabled:', event.event);
+    return;
+    
     // Skip analytics in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
       console.log('Analytics disabled in development:', event.event);
       return;
     }

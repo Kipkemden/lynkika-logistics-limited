@@ -26,8 +26,6 @@ const authLimiter = rateLimit({
 router.post('/login', async (req, res) => {
   console.log('\n=== LOGIN ATTEMPT STARTED ===');
   console.log('Timestamp:', new Date().toISOString());
-  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Request body:', JSON.stringify(req.body, null, 2));
   console.log('Environment:', process.env.NODE_ENV);
   console.log('JWT Secret exists:', !!process.env.JWT_SECRET);
   
@@ -35,12 +33,9 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('Extracted email:', email);
     console.log('Password provided:', !!password);
-    console.log('Password length:', password ? password.length : 0);
 
     if (!email || !password) {
       console.log('❌ VALIDATION FAILED: Missing email or password');
-      console.log('Email missing:', !email);
-      console.log('Password missing:', !password);
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
@@ -65,19 +60,14 @@ router.post('/login', async (req, res) => {
 
     console.log('🔍 CHECKING HARDCODED CREDENTIALS');
     console.log('Email in admin list:', email in adminCredentials);
-    console.log('Expected password for', email, ':', adminCredentials[email]);
-    console.log('Provided password:', password);
-    console.log('Passwords match:', adminCredentials[email] === password);
 
     // Check if this is a known admin credential
     if (adminCredentials[email] && adminCredentials[email] === password) {
       console.log('🎉 HARDCODED CREDENTIAL MATCH - Using bypass for:', email);
       
       const jwtSecret = process.env.JWT_SECRET || 'LynkikaSecureJWT2024!ProductionKey';
-      console.log('JWT Secret being used:', jwtSecret.substring(0, 10) + '...');
       
       const tokenPayload = { userId: email, role: userRoles[email] };
-      console.log('Token payload:', JSON.stringify(tokenPayload, null, 2));
       
       const token = jwt.sign(
         tokenPayload,
@@ -86,8 +76,6 @@ router.post('/login', async (req, res) => {
       );
       
       console.log('✅ JWT TOKEN GENERATED successfully');
-      console.log('Token length:', token.length);
-      console.log('Token preview:', token.substring(0, 50) + '...');
 
       const responseData = {
         token,
@@ -99,112 +87,22 @@ router.post('/login', async (req, res) => {
         }
       };
       
-      console.log('📤 SENDING SUCCESS RESPONSE:', JSON.stringify(responseData, null, 2));
+      console.log('📤 SENDING SUCCESS RESPONSE');
       console.log('=== LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
       
       return res.json(responseData);
     }
 
-    console.log('❌ HARDCODED CREDENTIAL MISMATCH - Trying database...');
+    console.log('❌ HARDCODED CREDENTIAL MISMATCH');
+    console.log('=== LOGIN ATTEMPT FAILED ===\n');
+    return res.status(401).json({ message: 'Invalid credentials' });
 
-    // Try database lookup (with error handling)
-    console.log('🔍 ATTEMPTING DATABASE LOOKUP...');
-    try {
-      const user = await userService.findByEmail(email);
-      console.log('Database user found:', user ? 'Yes' : 'No');
-      
-      if (user) {
-        console.log('Database user details:', JSON.stringify({
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          name: user.name,
-          is_active: user.is_active
-        }, null, 2));
-      }
-      
-      if (!user) {
-        console.log('❌ USER NOT FOUND in database for email:', email);
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      console.log('🔐 COMPARING PASSWORD...');
-      const isMatch = await userService.comparePassword(password, user.password_hash);
-      console.log('Password comparison result:', isMatch);
-      
-      if (!isMatch) {
-        console.log('❌ PASSWORD MISMATCH for user:', email);
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      console.log('✅ PASSWORD MATCH - Updating last login...');
-      await userService.updateLastLogin(user.id);
-
-      console.log('🎫 GENERATING JWT TOKEN...');
-      const token = jwt.sign(
-        { userId: user.id, role: user.role },
-        process.env.JWT_SECRET || 'LynkikaSecureJWT2024!ProductionKey',
-        { expiresIn: '8h' }
-      );
-
-      console.log('✅ DATABASE LOGIN SUCCESSFUL for user:', email);
-      console.log('=== LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
-      
-      res.json({
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
-      });
-    } catch (dbError) {
-      console.error('💥 DATABASE ERROR occurred:', dbError);
-      console.error('Database error details:', {
-        message: dbError.message,
-        code: dbError.code,
-        stack: dbError.stack
-      });
-      
-      // Fallback to credential check if database fails
-      console.log('🔄 DATABASE FAILED - Trying credential fallback...');
-      if (adminCredentials[email] && adminCredentials[email] === password) {
-        console.log('✅ DATABASE FAILED BUT CREDENTIAL FALLBACK WORKED for:', email);
-        
-        const token = jwt.sign(
-          { userId: email, role: userRoles[email] },
-          process.env.JWT_SECRET || 'LynkikaSecureJWT2024!ProductionKey',
-          { expiresIn: '8h' }
-        );
-
-        console.log('=== LOGIN ATTEMPT COMPLETED WITH FALLBACK ===\n');
-        return res.json({
-          token,
-          user: {
-            id: email,
-            name: email.split('@')[0].replace('.', ' ').toUpperCase(),
-            email: email,
-            role: userRoles[email]
-          }
-        });
-      }
-      
-      console.log('❌ BOTH DATABASE AND FALLBACK FAILED');
-      console.log('=== LOGIN ATTEMPT FAILED ===\n');
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
   } catch (error) {
     console.error('💥 CRITICAL LOGIN ERROR:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
     console.log('=== LOGIN ATTEMPT FAILED WITH ERROR ===\n');
     
     res.status(500).json({ 
-      message: 'Server error',
+      message: 'Authentication service temporarily unavailable',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

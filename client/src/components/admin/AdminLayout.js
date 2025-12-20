@@ -22,7 +22,9 @@ import {
   Assignment,
   LocalShipping,
   ExitToApp,
-  Person
+  Person,
+  Monitoring,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -35,6 +37,11 @@ const AdminLayout = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const menuItems = [
     {
@@ -42,6 +49,12 @@ const AdminLayout = ({ children }) => {
       icon: <Dashboard />,
       path: '/ops-control-center/dashboard',
       roles: ['super_admin', 'operations_manager', 'dispatcher']
+    },
+    {
+      text: 'System Monitoring',
+      icon: <Monitoring />,
+      path: '/ops-control-center/monitoring',
+      roles: ['super_admin']
     },
     {
       text: 'Route Management',
@@ -87,18 +100,28 @@ const AdminLayout = ({ children }) => {
       <AppBar
         position="fixed"
         sx={{
-          width: `calc(100% - ${drawerWidth}px)`,
-          ml: `${drawerWidth}px`,
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          ml: { sm: `${drawerWidth}px` },
           background: 'linear-gradient(135deg, #0A2463 0%, #1E88E5 100%)'
         }}
       >
         <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+            sx={{ mr: 2, display: { sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
+          
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Lynkika Operations Control Center
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
               {user?.name} ({user?.role.replace('_', ' ')})
             </Typography>
             <IconButton
@@ -141,54 +164,115 @@ const AdminLayout = ({ children }) => {
       </AppBar>
 
       {/* Drawer */}
-      <Drawer
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: drawerWidth,
-            boxSizing: 'border-box',
-            background: 'linear-gradient(180deg, #0A2463 0%, #1E88E5 100%)',
-            color: 'white'
-          },
-        }}
-        variant="permanent"
-        anchor="left"
+      <Box
+        component="nav"
+        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
       >
-        <Toolbar>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
-            Lynkika Admin
-          </Typography>
-        </Toolbar>
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
-        
-        <List>
-          {filteredMenuItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                selected={location.pathname === item.path}
-                onClick={() => navigate(item.path)}
-                sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(255,255,255,0.15)',
+        {/* Mobile drawer */}
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile.
+          }}
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': {
+              width: drawerWidth,
+              boxSizing: 'border-box',
+              background: 'linear-gradient(180deg, #0A2463 0%, #1E88E5 100%)',
+              color: 'white'
+            },
+          }}
+        >
+          <Toolbar>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
+              Lynkika Admin
+            </Typography>
+          </Toolbar>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
+          
+          <List>
+            {filteredMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => {
+                    navigate(item.path);
+                    handleDrawerToggle();
+                  }}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                      }
+                    },
                     '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      backgroundColor: 'rgba(255,255,255,0.1)',
                     }
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                  }
-                }}
-              >
-                <ListItemIcon sx={{ color: 'inherit' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Drawer>
+        
+        {/* Desktop drawer */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': {
+              width: drawerWidth,
+              boxSizing: 'border-box',
+              background: 'linear-gradient(180deg, #0A2463 0%, #1E88E5 100%)',
+              color: 'white'
+            },
+          }}
+          open
+        >
+          <Toolbar>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
+              Lynkika Admin
+            </Typography>
+          </Toolbar>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.2)' }} />
+          
+          <List>
+            {filteredMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                      }
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Drawer>
+      </Box>
 
       {/* Main Content */}
       <Box
@@ -196,8 +280,8 @@ const AdminLayout = ({ children }) => {
         sx={{
           flexGrow: 1,
           bgcolor: 'background.default',
-          p: 3,
-          width: `calc(100% - ${drawerWidth}px)`,
+          p: { xs: 2, sm: 3 },
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh'
         }}
       >

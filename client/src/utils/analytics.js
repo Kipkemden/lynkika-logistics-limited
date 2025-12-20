@@ -93,6 +93,12 @@ class PerformanceMonitor {
   }
 
   async sendMetric(metric) {
+    // Skip analytics in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics disabled in development:', metric.name);
+      return;
+    }
+    
     try {
       await fetch('/api/analytics/performance', {
         method: 'POST',
@@ -123,6 +129,12 @@ class PerformanceMonitor {
   }
 
   async sendEvent(event) {
+    // Skip analytics in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Analytics disabled in development:', event.event);
+      return;
+    }
+    
     try {
       await fetch('/api/analytics/events', {
         method: 'POST',

@@ -4,92 +4,33 @@ class PerformanceMonitor {
   constructor() {
     this.metrics = new Map();
     this.initialized = false;
-    this.init();
+    // Completely disable initialization
+    console.log('Analytics disabled - skipping initialization');
   }
 
   init() {
-    if (this.initialized) return;
-    
-    // Monitor Core Web Vitals
-    this.observeWebVitals();
-    
-    // Monitor resource loading
-    this.observeResourceTiming();
-    
-    // Monitor navigation timing
-    this.observeNavigationTiming();
-    
-    this.initialized = true;
+    // Do nothing - analytics disabled
+    return;
   }
 
   observeWebVitals() {
-    // Largest Contentful Paint (LCP)
-    new PerformanceObserver((entryList) => {
-      const entries = entryList.getEntries();
-      const lastEntry = entries[entries.length - 1];
-      this.recordMetric('LCP', lastEntry.startTime);
-    }).observe({ entryTypes: ['largest-contentful-paint'] });
-
-    // First Input Delay (FID)
-    new PerformanceObserver((entryList) => {
-      const entries = entryList.getEntries();
-      entries.forEach((entry) => {
-        this.recordMetric('FID', entry.processingStart - entry.startTime);
-      });
-    }).observe({ entryTypes: ['first-input'] });
-
-    // Cumulative Layout Shift (CLS)
-    let clsValue = 0;
-    new PerformanceObserver((entryList) => {
-      const entries = entryList.getEntries();
-      entries.forEach((entry) => {
-        if (!entry.hadRecentInput) {
-          clsValue += entry.value;
-        }
-      });
-      this.recordMetric('CLS', clsValue);
-    }).observe({ entryTypes: ['layout-shift'] });
+    // Do nothing - analytics disabled
+    return;
   }
 
   observeResourceTiming() {
-    new PerformanceObserver((entryList) => {
-      const entries = entryList.getEntries();
-      entries.forEach((entry) => {
-        if (entry.initiatorType === 'fetch' || entry.initiatorType === 'xmlhttprequest') {
-          this.recordMetric('API_Response_Time', entry.duration, {
-            url: entry.name,
-            method: 'API_CALL'
-          });
-        }
-      });
-    }).observe({ entryTypes: ['resource'] });
+    // Do nothing - analytics disabled
+    return;
   }
 
   observeNavigationTiming() {
-    window.addEventListener('load', () => {
-      const navigation = performance.getEntriesByType('navigation')[0];
-      if (navigation) {
-        this.recordMetric('Page_Load_Time', navigation.loadEventEnd - navigation.fetchStart);
-        this.recordMetric('DOM_Content_Loaded', navigation.domContentLoadedEventEnd - navigation.fetchStart);
-        this.recordMetric('Time_To_Interactive', navigation.domInteractive - navigation.fetchStart);
-      }
-    });
+    // Do nothing - analytics disabled
+    return;
   }
 
   recordMetric(name, value, metadata = {}) {
-    const metric = {
-      name,
-      value,
-      timestamp: Date.now(),
-      url: window.location.pathname,
-      userAgent: navigator.userAgent,
-      ...metadata
-    };
-
-    this.metrics.set(`${name}_${Date.now()}`, metric);
-    
-    // Send to analytics endpoint
-    this.sendMetric(metric);
+    // Analytics completely disabled
+    return;
   }
 
   async sendMetric(metric) {
@@ -99,18 +40,8 @@ class PerformanceMonitor {
 
   // Business event tracking
   trackEvent(eventName, properties = {}) {
-    const event = {
-      event: eventName,
-      properties: {
-        ...properties,
-        timestamp: Date.now(),
-        url: window.location.pathname,
-        userAgent: navigator.userAgent,
-        sessionId: this.getSessionId()
-      }
-    };
-
-    this.sendEvent(event);
+    // Analytics completely disabled
+    return;
   }
 
   async sendEvent(event) {

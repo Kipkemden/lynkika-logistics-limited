@@ -93,16 +93,14 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
-// Test login endpoint for development
+// Test login endpoint for development and troubleshooting
 router.post('/test-login', async (req, res) => {
-  if (process.env.NODE_ENV !== 'development') {
-    return res.status(404).json({ message: 'Not found' });
-  }
-
   try {
-    // Return a test token for development
+    console.log('Test login endpoint accessed');
+    
+    // Return a test token
     const testToken = jwt.sign(
-      { userId: 1, role: 'super_admin' },
+      { userId: '1', role: 'super_admin' },
       process.env.JWT_SECRET || 'test-secret',
       { expiresIn: '8h' }
     );
@@ -110,7 +108,7 @@ router.post('/test-login', async (req, res) => {
     res.json({
       token: testToken,
       user: {
-        id: 1,
+        id: '1',
         name: 'Test Admin',
         email: 'admin@lynkika.co.ke',
         role: 'super_admin'

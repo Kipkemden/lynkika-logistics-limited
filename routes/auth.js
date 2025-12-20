@@ -72,8 +72,15 @@ router.post('/login', async (req, res) => {
     if (adminCredentials[email] && adminCredentials[email] === password) {
       console.log('🎉 HARDCODED CREDENTIAL MATCH - Using bypass for:', email);
       
-      const jwtSecret = process.env.JWT_SECRET || 'LynkikaSecureJWT2024!ProductionKey';
-      console.log('🔐 JWT Secret length:', jwtSecret.length);
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error('❌ JWT_SECRET not found in environment variables');
+        return res.status(500).json({ 
+          message: 'Authentication service configuration error',
+          timestamp: new Date().toISOString()
+        });
+      }
+      console.log('🔐 JWT Secret loaded from environment');
       
       const tokenPayload = { userId: email, role: userRoles[email] };
       console.log('🔐 Token payload:', tokenPayload);
@@ -143,10 +150,15 @@ router.post('/test-login', async (req, res) => {
   try {
     console.log('Test login endpoint accessed');
     
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      return res.status(500).json({ message: 'JWT secret not configured' });
+    }
+    
     // Return a test token
     const testToken = jwt.sign(
       { userId: '1', role: 'super_admin' },
-      process.env.JWT_SECRET || 'test-secret',
+      jwtSecret,
       { expiresIn: '8h' }
     );
 

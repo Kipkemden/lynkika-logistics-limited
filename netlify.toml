@@ -8,6 +8,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  GENERATE_SOURCEMAP = "false"
 
 # Redirect all API calls to main serverless function
 [[redirects]]

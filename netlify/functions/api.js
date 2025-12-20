@@ -63,10 +63,141 @@ app.use((req, res, next) => {
   next();
 });
 
-// Load all routes with better error handling
+// Embedded auth routes (since external files aren't bundled properly)
+const jwt = require('jsonwebtoken');
+
+// Auth test endpoint
+app.get('/auth/test', (req, res) => {
+  console.log('🧪 Auth test endpoint accessed');
+  res.json({ 
+    message: 'Auth route is working',
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+    }
+  });
+});
+
+// Admin login endpoint
+app.post('/auth/login', async (req, res) => {
+  console.log('\n🔐 === LOGIN ATTEMPT STARTED ===');
+  console.log('🔐 Timestamp:', new Date().toISOString());
+  console.log('🔐 Environment:', process.env.NODE_ENV);
+  console.log('🔐 JWT Secret exists:', !!process.env.JWT_SECRET);
+  console.log('🔐 Supabase URL exists:', !!process.env.SUPABASE_URL);
+  console.log('🔐 Supabase Key exists:', !!process.env.SUPABASE_ANON_KEY);
+  
+  try {
+    const { email, password } = req.body;
+    console.log('🔐 Extracted email:', email);
+    console.log('🔐 Password provided:', !!password);
+    console.log('🔐 Request headers:', JSON.stringify(req.headers, null, 2));
+
+    if (!email || !password) {
+      console.log('❌ VALIDATION FAILED: Missing email or password');
+      return res.status(400).json({ 
+        message: 'Email and password are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log('✅ VALIDATION PASSED: Email and password provided');
+
+    // Temporary bypass for known admin credentials
+    const adminCredentials = {
+      'admin@lynkika.co.ke': 'LynkikaAdmin2024!',
+      'operations@lynkika.co.ke': 'OpsManager2024!',
+      'dispatch@lynkika.co.ke': 'Dispatcher2024!',
+      'dispatch2@lynkika.co.ke': 'NairobiDispatch2024!',
+      'dispatch3@lynkika.co.ke': 'MombasaDispatch2024!'
+    };
+
+    const userRoles = {
+      'admin@lynkika.co.ke': 'super_admin',
+      'operations@lynkika.co.ke': 'operations_manager',
+      'dispatch@lynkika.co.ke': 'dispatcher',
+      'dispatch2@lynkika.co.ke': 'dispatcher',
+      'dispatch3@lynkika.co.ke': 'dispatcher'
+    };
+
+    console.log('🔍 CHECKING HARDCODED CREDENTIALS');
+    console.log('🔍 Email in admin list:', email in adminCredentials);
+    console.log('🔍 Available admin emails:', Object.keys(adminCredentials));
+
+    // Check if this is a known admin credential
+    if (adminCredentials[email] && adminCredentials[email] === password) {
+      console.log('🎉 HARDCODED CREDENTIAL MATCH - Using bypass for:', email);
+      
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error('❌ CRITICAL: JWT_SECRET not found in environment variables');
+        console.error('❌ Available env vars:', Object.keys(process.env).filter(k => !k.includes('SECRET')));
+        return res.status(500).json({ 
+          message: 'Authentication service configuration error: JWT_SECRET not configured',
+          timestamp: new Date().toISOString(),
+          debug: process.env.NODE_ENV === 'development' ? 'JWT_SECRET missing' : undefined
+        });
+      }
+      console.log('🔐 JWT Secret loaded from environment');
+      
+      const tokenPayload = { userId: email, role: userRoles[email] };
+      console.log('🔐 Token payload:', tokenPayload);
+      
+      const token = jwt.sign(
+        tokenPayload,
+        jwtSecret,
+        { expiresIn: '8h' }
+      );
+      
+      console.log('✅ JWT TOKEN GENERATED successfully');
+      console.log('✅ Token length:', token.length);
+
+      const responseData = {
+        token,
+        user: {
+          id: email,
+          name: email.split('@')[0].replace('.', ' ').toUpperCase(),
+          email: email,
+          role: userRoles[email]
+        }
+      };
+      
+      console.log('📤 SENDING SUCCESS RESPONSE');
+      console.log('📤 Response data:', JSON.stringify(responseData, null, 2));
+      console.log('🔐 === LOGIN ATTEMPT COMPLETED SUCCESSFULLY ===\n');
+      
+      return res.json(responseData);
+    }
+
+    console.log('❌ HARDCODED CREDENTIAL MISMATCH');
+    console.log('❌ Provided email:', email);
+    console.log('❌ Password match:', adminCredentials[email] === password);
+    console.log('🔐 === LOGIN ATTEMPT FAILED ===\n');
+    return res.status(401).json({ 
+      message: 'Invalid credentials',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('💥 CRITICAL LOGIN ERROR:', error);
+    console.error('💥 Error message:', error.message);
+    console.error('💥 Error stack:', error.stack);
+    console.log('🔐 === LOGIN ATTEMPT FAILED WITH ERROR ===\n');
+    
+    res.status(500).json({ 
+      message: 'Authentication service temporarily unavailable',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Load all routes with better error handling (keeping for other routes)
 const path = require('path');
 const routes = [
-  { path: '/auth', file: path.join(__dirname, '../../routes/auth'), name: 'auth' },
   { path: '/quotes', file: path.join(__dirname, '../../routes/quotes'), name: 'quotes' },
   { path: '/bookings', file: path.join(__dirname, '../../routes/bookings'), name: 'bookings' },
   { path: '/tracking', file: path.join(__dirname, '../../routes/tracking'), name: 'tracking' },

@@ -79,9 +79,13 @@ const limiter = rateLimit({
     return req.path === '/health' || process.env.NODE_ENV === 'development';
   }
 });
-app.use(limiter);
 
-// Specific rate limiting for auth endpoints
+// Only apply rate limiting in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(limiter);
+}
+
+// Specific rate limiting for auth endpoints - only in production
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 login attempts per 15 minutes
@@ -112,8 +116,12 @@ app.use(express.urlencoded({ extended: true }));
 const supabase = require('./config/supabase');
 console.log('Supabase client initialized');
 
-// Routes
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+// Routes - conditionally apply auth rate limiting
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/auth', authLimiter, require('./routes/auth'));
+} else {
+  app.use('/api/auth', require('./routes/auth'));
+}
 app.use('/api/quotes', require('./routes/quotes'));
 app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/tracking', require('./routes/tracking'));

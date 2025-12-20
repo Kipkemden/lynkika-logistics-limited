@@ -23,7 +23,7 @@ const authLimiter = rateLimit({
 });
 
 // Admin login - with detailed debugging
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', process.env.NODE_ENV === 'production' ? authLimiter : (req, res, next) => next(), async (req, res) => {
   try {
     console.log('Login attempt received:', { email: req.body.email });
     

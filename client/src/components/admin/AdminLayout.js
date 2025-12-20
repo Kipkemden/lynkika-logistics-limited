@@ -23,7 +23,7 @@ import {
   LocalShipping,
   ExitToApp,
   Person,
-  Monitoring,
+  Computer,
   Menu as MenuIcon
 } from '@mui/icons-material';
 import { useState } from 'react';
@@ -52,7 +52,7 @@ const AdminLayout = ({ children }) => {
     },
     {
       text: 'System Monitoring',
-      icon: <Monitoring />,
+      icon: <Computer />,
       path: '/ops-control-center/monitoring',
       roles: ['super_admin']
     },

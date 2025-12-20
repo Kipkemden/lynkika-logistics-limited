@@ -22,6 +22,21 @@ const authLimiter = rateLimit({
   }
 });
 
+// Simple test endpoint to verify auth route is working
+router.get('/test', (req, res) => {
+  console.log('🧪 Auth test endpoint accessed');
+  res.json({ 
+    message: 'Auth route is working',
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+    }
+  });
+});
+
 // Admin login - with database bypass for troubleshooting
 router.post('/login', async (req, res) => {
   console.log('\n🔐 === LOGIN ATTEMPT STARTED ===');
@@ -74,10 +89,12 @@ router.post('/login', async (req, res) => {
       
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {
-        console.error('❌ JWT_SECRET not found in environment variables');
+        console.error('❌ CRITICAL: JWT_SECRET not found in environment variables');
+        console.error('❌ Available env vars:', Object.keys(process.env).filter(k => !k.includes('SECRET')));
         return res.status(500).json({ 
-          message: 'Authentication service configuration error',
-          timestamp: new Date().toISOString()
+          message: 'Authentication service configuration error: JWT_SECRET not configured',
+          timestamp: new Date().toISOString(),
+          debug: process.env.NODE_ENV === 'development' ? 'JWT_SECRET missing' : undefined
         });
       }
       console.log('🔐 JWT Secret loaded from environment');

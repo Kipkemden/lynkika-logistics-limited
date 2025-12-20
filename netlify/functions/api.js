@@ -5,8 +5,18 @@ const compression = require('compression');
 
 const app = express();
 
-// Real-time analytics storage (in production, use Redis or database)
-const analyticsStore = {
+// Import analytics service for persistent storage
+let analyticsService;
+try {
+  analyticsService = require('../../services/analyticsService');
+  console.log('✅ Analytics service loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load analytics service:', error.message);
+  analyticsService = null;
+}
+
+// Fallback in-memory storage for when database is unavailable
+const fallbackStore = {
   performanceMetrics: [],
   errorLogs: [],
   securityEvents: [],
@@ -16,38 +26,52 @@ const analyticsStore = {
   systemStartTime: Date.now()
 };
 
-// Middleware to track all requests
+// Middleware to track all requests with persistent storage
 app.use((req, res, next) => {
   const startTime = Date.now();
   
-  // Track request
+  // Track request count
   const hour = new Date().getHours();
-  const key = `${new Date().toDateString()}_${hour}`;
-  analyticsStore.requestCounts[key] = (analyticsStore.requestCounts[key] || 0) + 1;
+  const date = new Date().toDateString();
+  const hourKey = `${date}_${hour}`;
   
-  // Override res.end to capture response time
+  // Update request count in database
+  if (analyticsService) {
+    analyticsService.updateRequestCount(hourKey, new Date().toISOString().split('T')[0], hour)
+      .catch(err => console.error('Failed to update request count:', err));
+  } else {
+    fallbackStore.requestCounts[hourKey] = (fallbackStore.requestCounts[hourKey] || 0) + 1;
+  }
+  
+  // Override res.end to capture response time and errors
   const originalEnd = res.end;
   res.end = function(...args) {
     const responseTime = Date.now() - startTime;
+    const clientIP = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     
-    // Store response time
-    analyticsStore.responseTimes.push({
-      timestamp: new Date().toISOString(),
+    // Store response time in database
+    const responseData = {
       responseTime,
       path: req.path,
       method: req.method,
-      statusCode: res.statusCode
-    });
+      statusCode: res.statusCode,
+      ip: clientIP,
+      timestamp: new Date().toISOString()
+    };
     
-    // Keep only last 1000 response times
-    if (analyticsStore.responseTimes.length > 1000) {
-      analyticsStore.responseTimes = analyticsStore.responseTimes.slice(-1000);
+    if (analyticsService) {
+      analyticsService.saveResponseTime(responseData)
+        .catch(err => console.error('Failed to save response time:', err));
+    } else {
+      fallbackStore.responseTimes.push(responseData);
+      if (fallbackStore.responseTimes.length > 1000) {
+        fallbackStore.responseTimes = fallbackStore.responseTimes.slice(-1000);
+      }
     }
     
-    // Log errors
+    // Log errors to database
     if (res.statusCode >= 400) {
-      analyticsStore.errorLogs.push({
-        timestamp: new Date().toISOString(),
+      const errorData = {
         level: res.statusCode >= 500 ? 'error' : 'warning',
         message: `${req.method} ${req.path} returned ${res.statusCode}`,
         source: 'API',
@@ -55,12 +79,18 @@ app.use((req, res, next) => {
         statusCode: res.statusCode,
         path: req.path,
         method: req.method,
-        ip: req.ip || req.headers['x-forwarded-for'] || 'unknown'
-      });
+        ip: clientIP,
+        timestamp: new Date().toISOString()
+      };
       
-      // Keep only last 500 error logs
-      if (analyticsStore.errorLogs.length > 500) {
-        analyticsStore.errorLogs = analyticsStore.errorLogs.slice(-500);
+      if (analyticsService) {
+        analyticsService.saveErrorLog(errorData)
+          .catch(err => console.error('Failed to save error log:', err));
+      } else {
+        fallbackStore.errorLogs.push(errorData);
+        if (fallbackStore.errorLogs.length > 500) {
+          fallbackStore.errorLogs = fallbackStore.errorLogs.slice(-500);
+        }
       }
     }
     
@@ -128,50 +158,53 @@ app.use((req, res, next) => {
   next();
 });
 
-// System monitoring endpoints with REAL data
+// System monitoring endpoints with PERSISTENT data
 app.get('/admin/monitoring/performance', async (req, res) => {
   try {
-    // Calculate real performance metrics from stored data
-    const now = Date.now();
-    const last24Hours = now - (24 * 60 * 60 * 1000);
+    let performanceData = [];
     
-    // Group response times by hour
-    const hourlyMetrics = {};
-    
-    analyticsStore.responseTimes
-      .filter(rt => new Date(rt.timestamp).getTime() > last24Hours)
-      .forEach(rt => {
-        const hour = new Date(rt.timestamp).getHours();
-        const key = `${new Date(rt.timestamp).toDateString()}_${hour}`;
-        
-        if (!hourlyMetrics[key]) {
-          hourlyMetrics[key] = {
-            timestamp: new Date(rt.timestamp).toISOString(),
-            responseTimes: [],
-            errorCount: 0,
-            requestCount: 0
-          };
-        }
-        
-        hourlyMetrics[key].responseTimes.push(rt.responseTime);
-        hourlyMetrics[key].requestCount++;
-        
-        if (rt.statusCode >= 400) {
-          hourlyMetrics[key].errorCount++;
-        }
-      });
-    
-    // Calculate averages
-    const performanceData = Object.values(hourlyMetrics).map(metric => ({
-      timestamp: metric.timestamp,
-      avgResponseTime: metric.responseTimes.length > 0 
-        ? Math.round(metric.responseTimes.reduce((a, b) => a + b, 0) / metric.responseTimes.length)
-        : 0,
-      errorRate: metric.requestCount > 0 
-        ? Math.round((metric.errorCount / metric.requestCount) * 100 * 100) / 100
-        : 0,
-      requestCount: metric.requestCount
-    })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (analyticsService) {
+      performanceData = await analyticsService.getPerformanceMetrics(24);
+    } else {
+      // Fallback to in-memory data
+      const now = Date.now();
+      const last24Hours = now - (24 * 60 * 60 * 1000);
+      const hourlyMetrics = {};
+      
+      fallbackStore.responseTimes
+        .filter(rt => new Date(rt.timestamp).getTime() > last24Hours)
+        .forEach(rt => {
+          const hour = new Date(rt.timestamp).getHours();
+          const key = `${new Date(rt.timestamp).toDateString()}_${hour}`;
+          
+          if (!hourlyMetrics[key]) {
+            hourlyMetrics[key] = {
+              timestamp: new Date(rt.timestamp).toISOString(),
+              responseTimes: [],
+              errorCount: 0,
+              requestCount: 0
+            };
+          }
+          
+          hourlyMetrics[key].responseTimes.push(rt.responseTime);
+          hourlyMetrics[key].requestCount++;
+          
+          if (rt.statusCode >= 400) {
+            hourlyMetrics[key].errorCount++;
+          }
+        });
+      
+      performanceData = Object.values(hourlyMetrics).map(metric => ({
+        timestamp: metric.timestamp,
+        avgResponseTime: metric.responseTimes.length > 0 
+          ? Math.round(metric.responseTimes.reduce((a, b) => a + b, 0) / metric.responseTimes.length)
+          : 0,
+        errorRate: metric.requestCount > 0 
+          ? Math.round((metric.errorCount / metric.requestCount) * 100 * 100) / 100
+          : 0,
+        requestCount: metric.requestCount
+      })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    }
 
     res.json(performanceData);
   } catch (error) {
@@ -182,12 +215,15 @@ app.get('/admin/monitoring/performance', async (req, res) => {
 
 app.get('/admin/monitoring/errors', async (req, res) => {
   try {
-    // Return real error logs from our storage
-    const recentErrors = analyticsStore.errorLogs
-      .slice(-50) // Last 50 errors
-      .reverse(); // Most recent first
+    let errorLogs = [];
+    
+    if (analyticsService) {
+      errorLogs = await analyticsService.getErrorLogs(50);
+    } else {
+      errorLogs = fallbackStore.errorLogs.slice(-50).reverse();
+    }
 
-    res.json(recentErrors);
+    res.json(errorLogs);
   } catch (error) {
     console.error('Error logs monitoring error:', error);
     res.status(500).json({ error: 'Failed to fetch error logs' });
@@ -196,8 +232,15 @@ app.get('/admin/monitoring/errors', async (req, res) => {
 
 app.get('/admin/monitoring/security', async (req, res) => {
   try {
-    // Return real security events
-    res.json(analyticsStore.securityEvents.slice(-50).reverse());
+    let securityEvents = [];
+    
+    if (analyticsService) {
+      securityEvents = await analyticsService.getSecurityEvents(50);
+    } else {
+      securityEvents = fallbackStore.securityEvents.slice(-50).reverse();
+    }
+
+    res.json(securityEvents);
   } catch (error) {
     console.error('Security monitoring error:', error);
     res.status(500).json({ error: 'Failed to fetch security events' });
@@ -206,15 +249,22 @@ app.get('/admin/monitoring/security', async (req, res) => {
 
 app.get('/admin/monitoring/cache', async (req, res) => {
   try {
-    // Return real cache statistics
-    const totalRequests = analyticsStore.cacheStats.hits + analyticsStore.cacheStats.misses;
-    const hitRate = totalRequests > 0 ? (analyticsStore.cacheStats.hits / totalRequests) : 0;
+    let cacheStats = {};
     
-    res.json({
-      ...analyticsStore.cacheStats,
-      hitRate: Math.round(hitRate * 100) / 100,
-      totalRequests
-    });
+    if (analyticsService) {
+      cacheStats = await analyticsService.getCacheStats();
+    } else {
+      const totalRequests = fallbackStore.cacheStats.hits + fallbackStore.cacheStats.misses;
+      const hitRate = totalRequests > 0 ? (fallbackStore.cacheStats.hits / totalRequests) : 0;
+      
+      cacheStats = {
+        ...fallbackStore.cacheStats,
+        hitRate: Math.round(hitRate * 100) / 100,
+        totalRequests
+      };
+    }
+    
+    res.json(cacheStats);
   } catch (error) {
     console.error('Cache monitoring error:', error);
     res.status(500).json({ error: 'Failed to fetch cache stats' });
@@ -223,9 +273,15 @@ app.get('/admin/monitoring/cache', async (req, res) => {
 
 app.post('/admin/monitoring/cache/clear', async (req, res) => {
   try {
-    // Reset cache stats
-    const clearedKeys = analyticsStore.cacheStats.keys;
-    analyticsStore.cacheStats = { hits: 0, misses: 0, keys: 0 };
+    let clearedKeys = 0;
+    
+    if (analyticsService) {
+      await analyticsService.updateCacheStats('clear');
+      clearedKeys = 100; // Placeholder
+    } else {
+      clearedKeys = fallbackStore.cacheStats.keys;
+      fallbackStore.cacheStats = { hits: 0, misses: 0, keys: 0 };
+    }
     
     console.log('🗑️ Cache cleared by admin');
     
@@ -245,16 +301,29 @@ app.get('/admin/monitoring/logs/:logType/download', async (req, res) => {
     const { logType } = req.params;
     let logContent = '';
     
-    if (logType === 'error') {
-      logContent = analyticsStore.errorLogs
-        .map(log => `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message} - ${log.details}`)
-        .join('\n');
-    } else if (logType === 'security') {
-      logContent = analyticsStore.securityEvents
-        .map(event => `[${event.timestamp}] ${event.severity}: ${event.eventType} from ${event.ipAddress} - ${event.details}`)
-        .join('\n');
+    if (analyticsService) {
+      const logs = await analyticsService.getLogsForDownload(logType);
+      
+      if (logType === 'error') {
+        logContent = logs
+          .map(log => `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message} - ${log.details}`)
+          .join('\n');
+      } else if (logType === 'security') {
+        logContent = logs
+          .map(event => `[${event.timestamp}] ${event.severity}: ${event.event_type} from ${event.ip_address} - ${event.details}`)
+          .join('\n');
+      }
     } else {
-      logContent = `[${new Date().toISOString()}] INFO: No logs available for type: ${logType}`;
+      // Fallback to in-memory data
+      if (logType === 'error') {
+        logContent = fallbackStore.errorLogs
+          .map(log => `[${log.timestamp}] ${log.level.toUpperCase()}: ${log.message} - ${log.details}`)
+          .join('\n');
+      } else if (logType === 'security') {
+        logContent = fallbackStore.securityEvents
+          .map(event => `[${event.timestamp}] ${event.severity}: ${event.eventType} from ${event.ipAddress} - ${event.details}`)
+          .join('\n');
+      }
     }
 
     if (!logContent) {
@@ -270,61 +339,82 @@ app.get('/admin/monitoring/logs/:logType/download', async (req, res) => {
   }
 });
 
-// Enhanced health check with real system info
-app.get('/health', (req, res) => {
-  const uptime = Math.floor((Date.now() - analyticsStore.systemStartTime) / 1000);
-  const recentResponseTimes = analyticsStore.responseTimes.slice(-100);
-  const avgResponseTime = recentResponseTimes.length > 0 
-    ? Math.round(recentResponseTimes.reduce((a, b) => a + b.responseTime, 0) / recentResponseTimes.length)
-    : 0;
-  
-  const healthData = {
-    status: 'OK',
-    message: 'System Operational',
-    timestamp: new Date().toISOString(),
-    uptime,
-    environment: process.env.NODE_ENV,
-    version: '1.0.0',
-    services: {
-      database: 'operational',
-      cache: 'operational',
-      api: 'operational'
-    },
-    performance: {
-      memoryUsage: process.memoryUsage(),
-      avgResponseTime,
-      totalRequests: analyticsStore.responseTimes.length,
-      errorCount: analyticsStore.errorLogs.length
+// Enhanced health check with persistent system info
+app.get('/health', async (req, res) => {
+  try {
+    let healthData = {
+      status: 'OK',
+      message: 'System Operational',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor((Date.now() - fallbackStore.systemStartTime) / 1000),
+      environment: process.env.NODE_ENV,
+      version: '1.0.0',
+      services: {
+        database: analyticsService ? 'operational' : 'fallback',
+        cache: 'operational',
+        api: 'operational'
+      },
+      performance: {
+        memoryUsage: process.memoryUsage(),
+        avgResponseTime: 0,
+        totalRequests: 0,
+        errorCount: 0
+      }
+    };
+
+    if (analyticsService) {
+      const systemHealth = await analyticsService.getSystemHealth();
+      healthData.performance = {
+        ...healthData.performance,
+        ...systemHealth
+      };
+    } else {
+      const recentResponseTimes = fallbackStore.responseTimes.slice(-100);
+      const avgResponseTime = recentResponseTimes.length > 0 
+        ? Math.round(recentResponseTimes.reduce((a, b) => a + b.responseTime, 0) / recentResponseTimes.length)
+        : 0;
+      
+      healthData.performance = {
+        ...healthData.performance,
+        avgResponseTime,
+        totalRequests: fallbackStore.responseTimes.length,
+        errorCount: fallbackStore.errorLogs.length
+      };
     }
-  };
-  
-  res.json(healthData);
+    
+    res.json(healthData);
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ error: 'Health check failed' });
+  }
 });
 
-// Embedded analytics routes with real data tracking
+// Embedded analytics routes with PERSISTENT data tracking
 app.post('/analytics/performance', async (req, res) => {
   try {
     const { name, value, timestamp, url, userAgent, metadata } = req.body;
     const clientIP = req.ip || req.headers['x-forwarded-for'] || 'unknown';
 
-    // Store real performance metric
-    analyticsStore.performanceMetrics.push({
+    const performanceData = {
       name,
       value,
       timestamp: timestamp || new Date().toISOString(),
       url,
       userAgent,
       clientIP,
-      ...metadata
-    });
+      metadata
+    };
 
-    // Keep only last 1000 performance metrics
-    if (analyticsStore.performanceMetrics.length > 1000) {
-      analyticsStore.performanceMetrics = analyticsStore.performanceMetrics.slice(-1000);
+    if (analyticsService) {
+      await analyticsService.savePerformanceMetric(performanceData);
+    } else {
+      fallbackStore.performanceMetrics.push(performanceData);
+      if (fallbackStore.performanceMetrics.length > 1000) {
+        fallbackStore.performanceMetrics = fallbackStore.performanceMetrics.slice(-1000);
+      }
     }
 
     console.log('📊 Performance metric stored:', { name, value, url });
-
     res.status(200).json({ message: 'Metric recorded', success: true });
   } catch (error) {
     console.error('Analytics error:', error);
@@ -337,7 +427,6 @@ app.post('/analytics/events', async (req, res) => {
     const { event, properties } = req.body;
     const clientIP = req.ip || req.headers['x-forwarded-for'] || 'unknown';
 
-    // Store real business event
     const eventData = {
       event,
       properties,
@@ -346,11 +435,23 @@ app.post('/analytics/events', async (req, res) => {
       userAgent: req.headers['user-agent']
     };
 
+    if (analyticsService) {
+      await analyticsService.saveBusinessEvent(eventData);
+    }
+
     // Track cache hits/misses for cache statistics
     if (event === 'cache_hit') {
-      analyticsStore.cacheStats.hits++;
+      if (analyticsService) {
+        await analyticsService.updateCacheStats('hit');
+      } else {
+        fallbackStore.cacheStats.hits++;
+      }
     } else if (event === 'cache_miss') {
-      analyticsStore.cacheStats.misses++;
+      if (analyticsService) {
+        await analyticsService.updateCacheStats('miss');
+      } else {
+        fallbackStore.cacheStats.misses++;
+      }
     }
 
     console.log('📊 Business event stored:', { event, properties });
@@ -358,14 +459,20 @@ app.post('/analytics/events', async (req, res) => {
     // Log important events as security events if relevant
     const securityEvents = ['admin_login', 'failed_login', 'suspicious_activity'];
     if (securityEvents.includes(event)) {
-      analyticsStore.securityEvents.push({
-        timestamp: new Date().toISOString(),
+      const securityEventData = {
         eventType: event.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         ipAddress: clientIP,
         userId: properties.userId || 'anonymous',
         severity: event === 'failed_login' ? 'HIGH' : 'LOW',
-        details: `Business event: ${event} with properties: ${JSON.stringify(properties)}`
-      });
+        details: `Business event: ${event} with properties: ${JSON.stringify(properties)}`,
+        timestamp: new Date().toISOString()
+      };
+
+      if (analyticsService) {
+        await analyticsService.saveSecurityEvent(securityEventData);
+      } else {
+        fallbackStore.securityEvents.push(securityEventData);
+      }
     }
 
     res.status(200).json({ message: 'Event tracked', success: true });
@@ -414,14 +521,20 @@ app.post('/auth/login', async (req, res) => {
       console.log('❌ VALIDATION FAILED: Missing email or password');
       
       // Log security event for failed validation
-      analyticsStore.securityEvents.push({
-        timestamp: new Date().toISOString(),
+      const securityEventData = {
         eventType: 'Invalid Login Request',
         ipAddress: clientIP,
         userId: email || 'unknown',
         severity: 'MEDIUM',
-        details: 'Missing email or password in login request'
-      });
+        details: 'Missing email or password in login request',
+        timestamp: new Date().toISOString()
+      };
+
+      if (analyticsService) {
+        await analyticsService.saveSecurityEvent(securityEventData);
+      } else {
+        fallbackStore.securityEvents.push(securityEventData);
+      }
       
       return res.status(400).json({ 
         message: 'Email and password are required',
@@ -481,14 +594,20 @@ app.post('/auth/login', async (req, res) => {
       console.log('✅ Token length:', token.length);
 
       // Log successful login security event
-      analyticsStore.securityEvents.push({
-        timestamp: new Date().toISOString(),
+      const successEventData = {
         eventType: 'Successful Admin Login',
         ipAddress: clientIP,
         userId: email,
         severity: 'LOW',
-        details: `Admin user ${email} logged in successfully with role ${userRoles[email]}`
-      });
+        details: `Admin user ${email} logged in successfully with role ${userRoles[email]}`,
+        timestamp: new Date().toISOString()
+      };
+
+      if (analyticsService) {
+        await analyticsService.saveSecurityEvent(successEventData);
+      } else {
+        fallbackStore.securityEvents.push(successEventData);
+      }
 
       const responseData = {
         token,
@@ -515,14 +634,20 @@ app.post('/auth/login', async (req, res) => {
     console.log('❌ Password match:', adminCredentials[email] === password);
     
     // Log failed login security event
-    analyticsStore.securityEvents.push({
-      timestamp: new Date().toISOString(),
+    const failedEventData = {
       eventType: 'Failed Login Attempt',
       ipAddress: clientIP,
       userId: email,
       severity: 'HIGH',
-      details: `Failed login attempt for ${email} - invalid credentials`
-    });
+      details: `Failed login attempt for ${email} - invalid credentials`,
+      timestamp: new Date().toISOString()
+    };
+
+    if (analyticsService) {
+      await analyticsService.saveSecurityEvent(failedEventData);
+    } else {
+      fallbackStore.securityEvents.push(failedEventData);
+    }
     
     console.log('🔐 === LOGIN ATTEMPT FAILED ===\n');
     return res.status(401).json({ 
@@ -536,14 +661,20 @@ app.post('/auth/login', async (req, res) => {
     console.error('💥 Error stack:', error.stack);
     
     // Log error security event
-    analyticsStore.securityEvents.push({
-      timestamp: new Date().toISOString(),
+    const errorEventData = {
       eventType: 'Login System Error',
       ipAddress: clientIP,
       userId: 'system',
       severity: 'HIGH',
-      details: `Login system error: ${error.message}`
-    });
+      details: `Login system error: ${error.message}`,
+      timestamp: new Date().toISOString()
+    };
+
+    if (analyticsService) {
+      await analyticsService.saveSecurityEvent(errorEventData);
+    } else {
+      fallbackStore.securityEvents.push(errorEventData);
+    }
     
     console.log('🔐 === LOGIN ATTEMPT FAILED WITH ERROR ===\n');
     

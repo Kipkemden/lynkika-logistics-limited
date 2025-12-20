@@ -53,7 +53,7 @@ const SystemMonitoring = () => {
   // Fetch system health
   const fetchSystemHealth = useCallback(async () => {
     try {
-      const response = await axios.get('/health');
+      const response = await axios.get('/api/health');
       setSystemHealth(response.data);
     } catch (error) {
       console.error('Failed to fetch system health:', error);

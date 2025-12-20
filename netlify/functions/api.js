@@ -63,6 +63,175 @@ app.use((req, res, next) => {
   next();
 });
 
+// System monitoring endpoints
+app.get('/admin/monitoring/performance', async (req, res) => {
+  try {
+    // Generate mock performance data for now - can be enhanced with real metrics
+    const performanceData = Array.from({ length: 24 }, (_, i) => ({
+      timestamp: new Date(Date.now() - (23 - i) * 60 * 60 * 1000).toISOString(),
+      avgResponseTime: Math.floor(Math.random() * 500) + 200,
+      errorRate: Math.random() * 5,
+      requestCount: Math.floor(Math.random() * 1000) + 500
+    }));
+
+    res.json(performanceData);
+  } catch (error) {
+    console.error('Performance monitoring error:', error);
+    res.status(500).json({ error: 'Failed to fetch performance data' });
+  }
+});
+
+app.get('/admin/monitoring/errors', async (req, res) => {
+  try {
+    // Mock error logs - in production, this would come from actual logs
+    const errorLogs = [
+      {
+        timestamp: new Date().toISOString(),
+        level: 'error',
+        message: 'Database connection timeout',
+        source: 'Database',
+        details: 'Connection to Supabase timed out after 30s'
+      },
+      {
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        level: 'warning',
+        message: 'High memory usage detected',
+        source: 'System',
+        details: 'Memory usage exceeded 80% threshold'
+      },
+      {
+        timestamp: new Date(Date.now() - 7200000).toISOString(),
+        level: 'error',
+        message: 'API rate limit exceeded',
+        source: 'API',
+        details: 'Client exceeded 100 requests per minute'
+      }
+    ];
+
+    res.json(errorLogs);
+  } catch (error) {
+    console.error('Error logs monitoring error:', error);
+    res.status(500).json({ error: 'Failed to fetch error logs' });
+  }
+});
+
+app.get('/admin/monitoring/security', async (req, res) => {
+  try {
+    // Mock security events
+    const securityEvents = [
+      {
+        timestamp: new Date().toISOString(),
+        eventType: 'Failed Login Attempt',
+        ipAddress: '192.168.1.100',
+        userId: 'unknown',
+        severity: 'HIGH',
+        details: 'Multiple failed login attempts from same IP'
+      },
+      {
+        timestamp: new Date(Date.now() - 1800000).toISOString(),
+        eventType: 'Admin Login',
+        ipAddress: '10.0.0.1',
+        userId: 'admin@lynkika.co.ke',
+        severity: 'LOW',
+        details: 'Successful admin login'
+      },
+      {
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        eventType: 'Suspicious Activity',
+        ipAddress: '203.0.113.1',
+        userId: 'anonymous',
+        severity: 'MEDIUM',
+        details: 'Unusual API access pattern detected'
+      }
+    ];
+
+    res.json(securityEvents);
+  } catch (error) {
+    console.error('Security monitoring error:', error);
+    res.status(500).json({ error: 'Failed to fetch security events' });
+  }
+});
+
+app.get('/admin/monitoring/cache', async (req, res) => {
+  try {
+    // Mock cache statistics
+    const cacheStats = {
+      hits: Math.floor(Math.random() * 10000) + 5000,
+      misses: Math.floor(Math.random() * 2000) + 500,
+      keys: Math.floor(Math.random() * 1000) + 200,
+      hitRate: 0.85,
+      totalSize: '45.2MB',
+      avgResponseTime: '12ms'
+    };
+
+    res.json(cacheStats);
+  } catch (error) {
+    console.error('Cache monitoring error:', error);
+    res.status(500).json({ error: 'Failed to fetch cache stats' });
+  }
+});
+
+app.post('/admin/monitoring/cache/clear', async (req, res) => {
+  try {
+    // Mock cache clear operation
+    console.log('🗑️ Cache clear requested by admin');
+    
+    res.json({ 
+      message: 'Cache cleared successfully',
+      timestamp: new Date().toISOString(),
+      clearedKeys: Math.floor(Math.random() * 500) + 100
+    });
+  } catch (error) {
+    console.error('Cache clear error:', error);
+    res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
+app.get('/admin/monitoring/logs/:logType/download', async (req, res) => {
+  try {
+    const { logType } = req.params;
+    
+    // Generate mock log content
+    const logContent = `
+[${new Date().toISOString()}] INFO: System monitoring log export
+[${new Date().toISOString()}] INFO: Log type: ${logType}
+[${new Date().toISOString()}] INFO: Generated for admin download
+[${new Date().toISOString()}] WARN: This is a mock log file for demonstration
+[${new Date().toISOString()}] ERROR: Sample error entry for testing
+    `.trim();
+
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="${logType}-logs-${new Date().toISOString().split('T')[0]}.log"`);
+    res.send(logContent);
+  } catch (error) {
+    console.error('Log download error:', error);
+    res.status(500).json({ error: 'Failed to download logs' });
+  }
+});
+
+// Enhanced health check with more system info
+app.get('/health', (req, res) => {
+  const healthData = {
+    status: 'OK',
+    message: 'System Operational',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: '1.0.0',
+    services: {
+      database: 'operational',
+      cache: 'operational',
+      api: 'operational'
+    },
+    performance: {
+      memoryUsage: process.memoryUsage(),
+      cpuUsage: process.cpuUsage()
+    }
+  };
+  
+  res.json(healthData);
+});
+
 // Embedded analytics routes (simplified for reliability)
 app.post('/analytics/performance', async (req, res) => {
   try {

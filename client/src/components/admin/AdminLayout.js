@@ -51,12 +51,6 @@ const AdminLayout = ({ children }) => {
       roles: ['super_admin', 'operations_manager', 'dispatcher']
     },
     {
-      text: 'System Monitoring',
-      icon: <Computer />,
-      path: '/ops-control-center/monitoring',
-      roles: ['super_admin']
-    },
-    {
       text: 'Route Management',
       icon: <Route />,
       path: '/ops-control-center/routes',
@@ -73,6 +67,12 @@ const AdminLayout = ({ children }) => {
       icon: <LocalShipping />,
       path: '/ops-control-center/courier',
       roles: ['super_admin', 'operations_manager', 'dispatcher']
+    },
+    {
+      text: 'System Monitoring',
+      icon: <Computer />,
+      path: '/ops-control-center/monitoring',
+      roles: ['super_admin']
     }
   ];
 

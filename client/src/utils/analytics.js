@@ -94,8 +94,7 @@ class PerformanceMonitor {
 
   async sendMetric(metric) {
     // DISABLE ANALYTICS COMPLETELY FOR NOW
-    console.log('Analytics disabled:', metric.name);
-    return;
+    return Promise.resolve();
   }
 
   // Business event tracking
@@ -116,8 +115,7 @@ class PerformanceMonitor {
 
   async sendEvent(event) {
     // DISABLE ANALYTICS COMPLETELY FOR NOW
-    console.log('Analytics disabled:', event.event);
-    return;
+    return Promise.resolve();
   }
 
   getSessionId() {

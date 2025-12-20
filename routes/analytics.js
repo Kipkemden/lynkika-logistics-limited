@@ -5,6 +5,10 @@ const router = express.Router();
 // Performance metrics endpoint
 router.post('/performance', async (req, res) => {
   try {
+    // Temporarily disable analytics processing
+    res.status(200).json({ message: 'Analytics temporarily disabled' });
+    return;
+
     const {
       name,
       value,
@@ -60,6 +64,10 @@ router.post('/performance', async (req, res) => {
 // Business events endpoint
 router.post('/events', async (req, res) => {
   try {
+    // Temporarily disable analytics processing
+    res.status(200).json({ message: 'Analytics temporarily disabled' });
+    return;
+
     const {
       event,
       properties

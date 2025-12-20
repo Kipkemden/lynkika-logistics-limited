@@ -64,26 +64,30 @@ app.use((req, res, next) => {
 });
 
 // Load all routes with better error handling
+const path = require('path');
 const routes = [
-  { path: '/auth', file: '../../routes/auth', name: 'auth' },
-  { path: '/quotes', file: '../../routes/quotes', name: 'quotes' },
-  { path: '/bookings', file: '../../routes/bookings', name: 'bookings' },
-  { path: '/tracking', file: '../../routes/tracking', name: 'tracking' },
-  { path: '/routes', file: '../../routes/routes', name: 'routes' },
-  { path: '/admin', file: '../../routes/admin', name: 'admin' },
-  { path: '/admin/monitoring', file: '../../routes/monitoring', name: 'monitoring' },
-  { path: '/security', file: '../../routes/security', name: 'security' },
-  { path: '/errors', file: '../../routes/errors', name: 'errors' },
-  { path: '/analytics', file: '../../routes/analytics', name: 'analytics' }
+  { path: '/auth', file: path.join(__dirname, '../../routes/auth'), name: 'auth' },
+  { path: '/quotes', file: path.join(__dirname, '../../routes/quotes'), name: 'quotes' },
+  { path: '/bookings', file: path.join(__dirname, '../../routes/bookings'), name: 'bookings' },
+  { path: '/tracking', file: path.join(__dirname, '../../routes/tracking'), name: 'tracking' },
+  { path: '/routes', file: path.join(__dirname, '../../routes/routes'), name: 'routes' },
+  { path: '/admin', file: path.join(__dirname, '../../routes/admin'), name: 'admin' },
+  { path: '/admin/monitoring', file: path.join(__dirname, '../../routes/monitoring'), name: 'monitoring' },
+  { path: '/security', file: path.join(__dirname, '../../routes/security'), name: 'security' },
+  { path: '/errors', file: path.join(__dirname, '../../routes/errors'), name: 'errors' },
+  { path: '/analytics', file: path.join(__dirname, '../../routes/analytics'), name: 'analytics' }
 ];
 
 routes.forEach(route => {
   try {
+    console.log(`🔍 Attempting to load ${route.name} from: ${route.file}`);
     const router = require(route.file);
     app.use(route.path, router);
     console.log(`✅ Loaded ${route.name} route successfully`);
   } catch (error) {
     console.error(`❌ Failed to load ${route.name} route:`, error.message);
+    console.error(`❌ File path attempted: ${route.file}`);
+    console.error(`❌ __dirname: ${__dirname}`);
     console.error(`❌ Stack trace:`, error.stack);
     app.use(route.path, (req, res) => {
       console.error(`🚨 ${route.name} service error for ${req.method} ${req.path}`);

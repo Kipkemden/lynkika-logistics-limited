@@ -96,24 +96,6 @@ class PerformanceMonitor {
     // DISABLE ANALYTICS COMPLETELY FOR NOW
     console.log('Analytics disabled:', metric.name);
     return;
-    
-    // Skip analytics in development
-    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
-      console.log('Analytics disabled in development:', metric.name);
-      return;
-    }
-    
-    try {
-      await fetch('/api/analytics/performance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(metric)
-      });
-    } catch (error) {
-      console.warn('Failed to send performance metric:', error);
-    }
   }
 
   // Business event tracking
@@ -136,24 +118,6 @@ class PerformanceMonitor {
     // DISABLE ANALYTICS COMPLETELY FOR NOW
     console.log('Analytics disabled:', event.event);
     return;
-    
-    // Skip analytics in development
-    if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost') {
-      console.log('Analytics disabled in development:', event.event);
-      return;
-    }
-    
-    try {
-      await fetch('/api/analytics/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(event)
-      });
-    } catch (error) {
-      console.warn('Failed to send analytics event:', error);
-    }
   }
 
   getSessionId() {

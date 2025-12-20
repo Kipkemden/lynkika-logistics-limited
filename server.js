@@ -22,6 +22,20 @@ app.use(morgan('combined', {
   }
 }));
 
+// Additional request logging for debugging
+app.use((req, res, next) => {
+  if (req.path.includes('/auth/login')) {
+    console.log('\n📥 INCOMING LOGIN REQUEST');
+    console.log('Method:', req.method);
+    console.log('Path:', req.path);
+    console.log('IP:', req.ip);
+    console.log('User-Agent:', req.get('User-Agent'));
+    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Body keys:', Object.keys(req.body || {}));
+  }
+  next();
+});
+
 // Express Winston logger for detailed request/response logging
 app.use(expressWinston.logger({
   winstonInstance: logger,
@@ -217,6 +231,16 @@ process.on('SIGINT', () => {
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
+  console.log('\n🚀 LYNKIKA LOGISTICS SERVER STARTED');
+  console.log('=================================');
+  console.log('Port:', PORT);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Rate limiting enabled:', process.env.NODE_ENV === 'production');
+  console.log('JWT Secret configured:', !!process.env.JWT_SECRET);
+  console.log('Supabase URL configured:', !!process.env.SUPABASE_URL);
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('=================================\n');
+  
   logger.info(`Lynkika Logistics Server running on port ${PORT}`, {
     environment: process.env.NODE_ENV,
     port: PORT,
